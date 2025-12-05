@@ -1,2 +1,2 @@
-# project-c-ng-ngh-ph-n-m-m
+# project-An English speaking practice platform supported by AI.
 project công nghệ phần mềm
