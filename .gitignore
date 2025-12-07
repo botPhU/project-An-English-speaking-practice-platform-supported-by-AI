@@ -1,0 +1,16 @@
+# --- CHẶN RÁC HỆ THỐNG ---
+.DS_Store
+Thumbs.db
+.env
+
+# --- FRONTEND ---
+node_modules/
+dist/
+build/
+.eslintcache
+
+# --- BACKEND ---
+venv/
+.venv/
+__pycache__/
+*.pyc
