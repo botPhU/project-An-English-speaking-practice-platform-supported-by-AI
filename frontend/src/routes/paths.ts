@@ -3,8 +3,10 @@ export const ADMIN_ROUTES = {
     DASHBOARD: '/admin',
     USER_MANAGEMENT: '/admin/users',
     MENTOR_MANAGEMENT: '/admin/mentors',
+    LEARNER_MANAGEMENT: '/admin/learners',
     PACKAGE_MANAGEMENT: '/admin/packages',
     FEEDBACK_MODERATION: '/admin/feedbacks',
+    LEARNER_SUPPORT: '/admin/support',
     POLICY_MANAGEMENT: '/admin/policies',
     REPORTS: '/admin/reports',
 };

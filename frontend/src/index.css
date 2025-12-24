@@ -39,3 +39,43 @@ body {
 input:focus {
   outline: none;
 }
+
+/* Fix text colors for stat cards - use dark text in light mode, white in dark mode */
+.text-3xl.font-bold {
+  color: #111418;
+}
+
+.dark .text-3xl.font-bold {
+  color: #ffffff;
+}
+
+/* Size utilities */
+.size-2 {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.size-3 {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.size-8 {
+  width: 2rem;
+  height: 2rem;
+}
+
+.size-10 {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.size-12 {
+  width: 3rem;
+  height: 3rem;
+}
+
+.size-16 {
+  width: 4rem;
+  height: 4rem;
+}

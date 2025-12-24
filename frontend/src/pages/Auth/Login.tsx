@@ -154,7 +154,7 @@ export default function Login() {
                     <div className="grid grid-cols-2 gap-3">
                         <button className="flex cursor-pointer items-center justify-center gap-3 rounded-lg h-12 px-4 border border-[#dce0e5] dark:border-[#3b4754] bg-white dark:bg-[#1c2127] hover:bg-gray-50 dark:hover:bg-[#252b32] transition-colors">
                             <img
-                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAef47g2nr3-z9TCc8XM495uiyiBnzNWsFZSZm7oXkG2qL_w5ia1EfXt8POqCxFsjSftqT_BMNoFwBp5SDHl6xW4Xzmuiwfn1z2J4KpurzTxdAUCK7hBe3PsoqlHhcXL3pkLmaj60L_A2C-hTwECaIIXLUjw2qo5w_X5jza5plyM1dkJnr-Khwgd4M7b0LSF_pkXEoQIRUZ1VmNrBqPXmE3crVdsQK7zvjiapynWjrbyWUE4KjYx5VUp0Y8yNBCAZlAJuePtJ-2E9Q"
+                                src="https://images.seeklogo.com/logo-png/27/1/google-logo-png_seeklogo-273191.png"
                                 alt="Google"
                                 className="w-5 h-5"
                             />
@@ -162,7 +162,7 @@ export default function Login() {
                         </button>
                         <button className="flex cursor-pointer items-center justify-center gap-3 rounded-lg h-12 px-4 border border-[#dce0e5] dark:border-[#3b4754] bg-white dark:bg-[#1c2127] hover:bg-gray-50 dark:hover:bg-[#252b32] transition-colors">
                             <img
-                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrZ4mPLTl9vgD-MnFlRCYeLqDXGZFKC3_e5GDtB6nOqj-h8rskVx3LtKuLQwl5tVO_PSLQxBex3G8zM13LOB2wz9tcPWhtQFVRB-8kKDbM2knIGQst3M-wgqY4dLp2KQ9wTP0K4hYvgu8OaXx6iICawEuP5w15Wk117kVXycD3iMp9qiBHW6UgycText1K5rcifznYPjJnQESyrJ5yL3Ck5uWK5_NJUMmlCzA8g6JavdazJgeWKBzg9SwiQC3vZ7goDTvySfykfas"
+                                src="https://www.pngall.com/wp-content/uploads/17/Facebook-Logo-Circle-Creation-PNG.png"
                                 alt="Facebook"
                                 className="w-5 h-5"
                             />

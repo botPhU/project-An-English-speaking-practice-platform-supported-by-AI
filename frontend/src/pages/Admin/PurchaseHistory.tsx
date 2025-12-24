@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AdminLayout } from '../../components/layout';
 
 // Mock data for transactions
 const mockTransactions = [
@@ -28,190 +29,209 @@ export default function PurchaseHistory() {
     const totalRevenue = transactions.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.amount, 0);
 
     return (
-        <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#111418] p-6 font-[Manrope,sans-serif]">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-black text-[#111418] dark:text-white mb-2">
-                        Lịch Sử Mua Hàng
-                    </h1>
-                    <p className="text-[#637588] dark:text-[#9dabb9]">
-                        Xem chi tiết giao dịch mua gói dịch vụ của người dùng
-                    </p>
-                </div>
-                <button className="mt-4 md:mt-0 px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors flex items-center gap-2">
-                    <span className="material-symbols-outlined">download</span>
+        <AdminLayout
+            title="Lịch Sử Mua Hàng"
+            subtitle="Xem chi tiết giao dịch mua gói dịch vụ của người dùng"
+            icon="receipt_long"
+            actions={
+                <button className="bg-[#0bda5b] hover:bg-[#0bda5b]/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-[#0bda5b]/25 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">download</span>
                     Xuất CSV
                 </button>
-            </div>
+            }
+        >
+            <div className="max-w-[1400px] mx-auto flex flex-col gap-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="flex flex-col gap-2 rounded-xl p-5 bg-[#283039] border border-[#3b4754] shadow-sm">
+                        <div className="flex justify-between items-start">
+                            <p className="text-[#9dabb9] text-sm font-medium">Tổng giao dịch</p>
+                            <span className="material-symbols-outlined text-primary bg-primary/10 p-1 rounded-md text-[20px]">
+                                receipt_long
+                            </span>
+                        </div>
+                        <p className="text-white tracking-tight text-3xl font-bold">{transactions.length}</p>
+                    </div>
+                    <div className="flex flex-col gap-2 rounded-xl p-5 bg-[#283039] border border-[#3b4754] shadow-sm">
+                        <div className="flex justify-between items-start">
+                            <p className="text-[#9dabb9] text-sm font-medium">Doanh thu</p>
+                            <span className="material-symbols-outlined text-[#0bda5b] bg-[#0bda5b]/10 p-1 rounded-md text-[20px]">
+                                paid
+                            </span>
+                        </div>
+                        <p className="text-white tracking-tight text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+                    </div>
+                    <div className="flex flex-col gap-2 rounded-xl p-5 bg-[#283039] border border-[#3b4754] shadow-sm">
+                        <div className="flex justify-between items-start">
+                            <p className="text-[#9dabb9] text-sm font-medium">Đang xử lý</p>
+                            <span className="material-symbols-outlined text-yellow-500 bg-yellow-500/10 p-1 rounded-md text-[20px]">
+                                pending
+                            </span>
+                        </div>
+                        <p className="text-white tracking-tight text-3xl font-bold">
+                            {transactions.filter(t => t.status === 'pending').length}
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-2 rounded-xl p-5 bg-[#283039] border border-[#3b4754] shadow-sm">
+                        <div className="flex justify-between items-start">
+                            <p className="text-[#9dabb9] text-sm font-medium">Thất bại</p>
+                            <span className="material-symbols-outlined text-red-500 bg-red-500/10 p-1 rounded-md text-[20px]">
+                                error
+                            </span>
+                        </div>
+                        <p className="text-white tracking-tight text-3xl font-bold">
+                            {transactions.filter(t => t.status === 'failed').length}
+                        </p>
+                    </div>
+                </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-white dark:bg-[#1c2127] rounded-xl p-6 shadow-sm border border-[#dce0e5] dark:border-[#3b4754]">
-                    <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-lg bg-[#2b8cee]/10 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-[#2b8cee]">receipt_long</span>
+                {/* Filters */}
+                <div className="flex flex-col md:flex-row gap-4 items-end md:items-center justify-between bg-[#283039]/50 p-4 rounded-xl border border-[#3b4754]">
+                    <div className="flex flex-1 w-full gap-4 flex-col md:flex-row">
+                        <div className="relative w-full md:w-48">
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#9dabb9]">
+                                filter_list
+                            </span>
+                            <select
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                                className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg pl-11 pr-8 py-2.5 appearance-none focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                            >
+                                <option value="all">Tất cả trạng thái</option>
+                                <option value="completed">Hoàn thành</option>
+                                <option value="pending">Đang xử lý</option>
+                                <option value="failed">Thất bại</option>
+                            </select>
+                            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#9dabb9] pointer-events-none text-sm">
+                                expand_more
+                            </span>
                         </div>
-                        <div>
-                            <p className="text-2xl font-bold text-[#111418] dark:text-white">{transactions.length}</p>
-                            <p className="text-sm text-[#637588] dark:text-[#9dabb9]">Tổng giao dịch</p>
+                        <div className="relative w-full md:w-48">
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#9dabb9]">
+                                inventory_2
+                            </span>
+                            <select
+                                value={filterPackage}
+                                onChange={(e) => setFilterPackage(e.target.value)}
+                                className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg pl-11 pr-8 py-2.5 appearance-none focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                            >
+                                <option value="all">Tất cả gói</option>
+                                <option value="basic">Basic</option>
+                                <option value="premium">Premium</option>
+                            </select>
+                            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#9dabb9] pointer-events-none text-sm">
+                                expand_more
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                value={dateRange.from}
+                                onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+                                className="px-4 py-2.5 rounded-lg border border-[#3b4754] bg-[#1a222a] text-white focus:ring-2 focus:ring-primary/50"
+                            />
+                            <span className="text-[#9dabb9]">đến</span>
+                            <input
+                                type="date"
+                                value={dateRange.to}
+                                onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+                                className="px-4 py-2.5 rounded-lg border border-[#3b4754] bg-[#1a222a] text-white focus:ring-2 focus:ring-primary/50"
+                            />
                         </div>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-[#1c2127] rounded-xl p-6 shadow-sm border border-[#dce0e5] dark:border-[#3b4754]">
-                    <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-lg bg-green-500/10 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-green-500">paid</span>
-                        </div>
-                        <div>
-                            <p className="text-xl font-bold text-[#111418] dark:text-white">{formatCurrency(totalRevenue)}</p>
-                            <p className="text-sm text-[#637588] dark:text-[#9dabb9]">Doanh thu</p>
-                        </div>
+
+                {/* Transactions Table */}
+                <div className="rounded-xl border border-[#3b4754] bg-[#1a222a] overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-[#283039] border-b border-[#3b4754]">
+                                <tr>
+                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Mã GD</th>
+                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Người dùng</th>
+                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Gói dịch vụ</th>
+                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Số tiền</th>
+                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Ngày</th>
+                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Trạng thái</th>
+                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider text-right">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#3b4754]">
+                                {filteredTransactions.map((txn) => (
+                                    <tr key={txn.id} className="group hover:bg-[#283039] transition-colors">
+                                        <td className="p-4">
+                                            <span className="font-mono text-sm font-semibold text-primary">{txn.id}</span>
+                                        </td>
+                                        <td className="p-4">
+                                            <div>
+                                                <p className="font-semibold text-white">{txn.user}</p>
+                                                <p className="text-sm text-[#9dabb9]">{txn.email}</p>
+                                            </div>
+                                        </td>
+                                        <td className="p-4">
+                                            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                                                {txn.package}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 font-bold text-white">
+                                            {formatCurrency(txn.amount)}
+                                        </td>
+                                        <td className="p-4 text-[#9dabb9]">{txn.date}</td>
+                                        <td className="p-4">
+                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${txn.status === 'completed' ? 'bg-[#0bda5b]/20 text-[#0bda5b] ring-[#0bda5b]/30' :
+                                                txn.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500 ring-yellow-500/30' :
+                                                    'bg-red-500/20 text-red-500 ring-red-500/30'
+                                                }`}>
+                                                {txn.status === 'completed' ? 'Hoàn thành' :
+                                                    txn.status === 'pending' ? 'Đang xử lý' : 'Thất bại'}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-right">
+                                            <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors" title="Xem chi tiết">
+                                                    <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                                </button>
+                                                <button className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors" title="In hóa đơn">
+                                                    <span className="material-symbols-outlined text-[20px]">receipt</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-                <div className="bg-white dark:bg-[#1c2127] rounded-xl p-6 shadow-sm border border-[#dce0e5] dark:border-[#3b4754]">
-                    <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-yellow-500">pending</span>
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-[#111418] dark:text-white">
-                                {transactions.filter(t => t.status === 'pending').length}
-                            </p>
-                            <p className="text-sm text-[#637588] dark:text-[#9dabb9]">Đang xử lý</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-[#1c2127] rounded-xl p-6 shadow-sm border border-[#dce0e5] dark:border-[#3b4754]">
-                    <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-lg bg-red-500/10 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-red-500">error</span>
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-[#111418] dark:text-white">
-                                {transactions.filter(t => t.status === 'failed').length}
-                            </p>
-                            <p className="text-sm text-[#637588] dark:text-[#9dabb9]">Thất bại</p>
+
+                    {/* Pagination */}
+                    <div className="flex items-center justify-between border-t border-[#3b4754] bg-[#1a222a] px-4 py-3 sm:px-6">
+                        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm text-[#9dabb9]">
+                                    Hiển thị <span className="font-medium text-white">1</span> đến{' '}
+                                    <span className="font-medium text-white">{filteredTransactions.length}</span> trong số{' '}
+                                    <span className="font-medium text-white">{transactions.length}</span> giao dịch
+                                </p>
+                            </div>
+                            <div>
+                                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
+                                    <button className="relative inline-flex items-center rounded-l-md px-2 py-2 text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039]">
+                                        <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+                                    </button>
+                                    <button className="relative z-10 inline-flex items-center bg-primary px-4 py-2 text-sm font-semibold text-white">
+                                        1
+                                    </button>
+                                    <button className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039]">
+                                        2
+                                    </button>
+                                    <button className="relative inline-flex items-center rounded-r-md px-2 py-2 text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039]">
+                                        <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                                    </button>
+                                </nav>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            {/* Filters */}
-            <div className="bg-white dark:bg-[#1c2127] rounded-xl p-4 mb-6 shadow-sm border border-[#dce0e5] dark:border-[#3b4754]">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="px-4 py-3 rounded-lg border border-[#dce0e5] dark:border-[#3b4754] bg-[#f6f7f8] dark:bg-[#111418] text-[#111418] dark:text-white focus:ring-2 focus:ring-[#2b8cee]/50"
-                    >
-                        <option value="all">Tất cả trạng thái</option>
-                        <option value="completed">Hoàn thành</option>
-                        <option value="pending">Đang xử lý</option>
-                        <option value="failed">Thất bại</option>
-                    </select>
-                    <select
-                        value={filterPackage}
-                        onChange={(e) => setFilterPackage(e.target.value)}
-                        className="px-4 py-3 rounded-lg border border-[#dce0e5] dark:border-[#3b4754] bg-[#f6f7f8] dark:bg-[#111418] text-[#111418] dark:text-white focus:ring-2 focus:ring-[#2b8cee]/50"
-                    >
-                        <option value="all">Tất cả gói</option>
-                        <option value="basic">Basic</option>
-                        <option value="premium">Premium</option>
-                    </select>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="date"
-                            value={dateRange.from}
-                            onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-                            className="px-4 py-3 rounded-lg border border-[#dce0e5] dark:border-[#3b4754] bg-[#f6f7f8] dark:bg-[#111418] text-[#111418] dark:text-white focus:ring-2 focus:ring-[#2b8cee]/50"
-                        />
-                        <span className="text-[#637588]">đến</span>
-                        <input
-                            type="date"
-                            value={dateRange.to}
-                            onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-                            className="px-4 py-3 rounded-lg border border-[#dce0e5] dark:border-[#3b4754] bg-[#f6f7f8] dark:bg-[#111418] text-[#111418] dark:text-white focus:ring-2 focus:ring-[#2b8cee]/50"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Transactions Table */}
-            <div className="bg-white dark:bg-[#1c2127] rounded-xl shadow-sm border border-[#dce0e5] dark:border-[#3b4754] overflow-hidden">
-                <table className="w-full">
-                    <thead>
-                        <tr className="bg-[#f6f7f8] dark:bg-[#111418] border-b border-[#dce0e5] dark:border-[#3b4754]">
-                            <th className="text-left px-6 py-4 text-sm font-bold text-[#637588] dark:text-[#9dabb9]">Mã GD</th>
-                            <th className="text-left px-6 py-4 text-sm font-bold text-[#637588] dark:text-[#9dabb9]">Người dùng</th>
-                            <th className="text-left px-6 py-4 text-sm font-bold text-[#637588] dark:text-[#9dabb9]">Gói dịch vụ</th>
-                            <th className="text-left px-6 py-4 text-sm font-bold text-[#637588] dark:text-[#9dabb9]">Số tiền</th>
-                            <th className="text-left px-6 py-4 text-sm font-bold text-[#637588] dark:text-[#9dabb9]">Ngày</th>
-                            <th className="text-left px-6 py-4 text-sm font-bold text-[#637588] dark:text-[#9dabb9]">Trạng thái</th>
-                            <th className="text-right px-6 py-4 text-sm font-bold text-[#637588] dark:text-[#9dabb9]">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredTransactions.map((txn) => (
-                            <tr key={txn.id} className="border-b border-[#dce0e5] dark:border-[#3b4754] hover:bg-[#f6f7f8] dark:hover:bg-[#111418]/50 transition-colors">
-                                <td className="px-6 py-4">
-                                    <span className="font-mono text-sm font-semibold text-[#2b8cee]">{txn.id}</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div>
-                                        <p className="font-semibold text-[#111418] dark:text-white">{txn.user}</p>
-                                        <p className="text-sm text-[#637588] dark:text-[#9dabb9]">{txn.email}</p>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="px-3 py-1 rounded-full bg-[#2b8cee]/10 text-[#2b8cee] text-sm font-medium">
-                                        {txn.package}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 font-bold text-[#111418] dark:text-white">
-                                    {formatCurrency(txn.amount)}
-                                </td>
-                                <td className="px-6 py-4 text-[#637588] dark:text-[#9dabb9]">{txn.date}</td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${txn.status === 'completed' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
-                                            txn.status === 'pending' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
-                                                'bg-red-500/10 text-red-600 dark:text-red-400'
-                                        }`}>
-                                        {txn.status === 'completed' ? 'Hoàn thành' :
-                                            txn.status === 'pending' ? 'Đang xử lý' : 'Thất bại'}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <button className="p-2 hover:bg-[#2b8cee]/10 rounded-lg transition-colors text-[#637588] hover:text-[#2b8cee]">
-                                            <span className="material-symbols-outlined">visibility</span>
-                                        </button>
-                                        <button className="p-2 hover:bg-[#2b8cee]/10 rounded-lg transition-colors text-[#637588] hover:text-[#2b8cee]">
-                                            <span className="material-symbols-outlined">receipt</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                {/* Pagination */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-[#dce0e5] dark:border-[#3b4754]">
-                    <p className="text-sm text-[#637588] dark:text-[#9dabb9]">
-                        Hiển thị 1-{filteredTransactions.length} của {transactions.length} giao dịch
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button className="px-4 py-2 rounded-lg border border-[#dce0e5] dark:border-[#3b4754] text-[#637588] hover:bg-[#f6f7f8] dark:hover:bg-[#111418] transition-colors">
-                            Trước
-                        </button>
-                        <button className="px-4 py-2 rounded-lg bg-[#2b8cee] text-white font-medium">1</button>
-                        <button className="px-4 py-2 rounded-lg border border-[#dce0e5] dark:border-[#3b4754] text-[#637588] hover:bg-[#f6f7f8] dark:hover:bg-[#111418] transition-colors">
-                            Sau
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </AdminLayout>
     );
 }

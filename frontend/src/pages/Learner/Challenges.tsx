@@ -125,7 +125,7 @@ export default function Challenges() {
                                         Cấp độ hiện tại
                                     </p>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-bold">Level 12</span>
+                                        <span className="text-3xl font-bold text-[#111418] dark:text-white">Level 12</span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-[#283039] h-2 rounded-full overflow-hidden mt-1">
                                         <div className="bg-primary h-full rounded-full w-[70%]" />
@@ -145,7 +145,7 @@ export default function Challenges() {
                                         Tổng điểm XP
                                     </p>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-bold">12,450</span>
+                                        <span className="text-3xl font-bold text-[#111418] dark:text-white">12,450</span>
                                         <span className="text-sm font-bold text-text-secondary">
                                             XP
                                         </span>
@@ -188,7 +188,7 @@ export default function Challenges() {
                                         Huy hiệu
                                     </p>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-bold">8</span>
+                                        <span className="text-3xl font-bold text-[#111418] dark:text-white">8</span>
                                         <span className="text-xl text-text-secondary">/ 20</span>
                                     </div>
                                     <p className="text-sm text-text-secondary mt-1">
@@ -200,7 +200,7 @@ export default function Challenges() {
                             <div className="col-span-1 md:col-span-12 lg:col-span-4 flex flex-col gap-6">
                                 <div className="flex flex-col gap-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-xl font-bold">Nhiệm vụ hôm nay</h3>
+                                        <h3 className="text-xl font-bold text-[#111418] dark:text-white">Nhiệm vụ hôm nay</h3>
                                         <span className="text-sm text-primary font-medium cursor-pointer hover:underline">
                                             Xem tất cả
                                         </span>
@@ -292,7 +292,7 @@ export default function Challenges() {
                                 {/* Heatmap Section */}
                                 <div className="bg-white dark:bg-[#1e242b] p-6 rounded-xl border border-gray-200 dark:border-[#283039] shadow-sm">
                                     <div className="flex items-center justify-between mb-6">
-                                        <h3 className="text-lg font-bold">Hoạt động năm nay</h3>
+                                        <h3 className="text-lg font-bold text-[#111418] dark:text-white">Hoạt động năm nay</h3>
                                         <div className="flex gap-2 text-xs">
                                             <span className="text-text-secondary">Ít</span>
                                             <div className="flex gap-1">
