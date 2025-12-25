@@ -1,5 +1,7 @@
-import React from 'react';
 import AdminSidebar from './AdminSidebar';
+import NotificationDropdown from './NotificationDropdown';
+import { Link } from 'react-router-dom';
+import { ADMIN_ROUTES } from '../../routes/paths';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
@@ -66,13 +68,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
                         {actions}
 
                         {/* Notifications */}
-                        <button className="flex cursor-pointer items-center justify-center overflow-hidden rounded-lg size-10 bg-[#283039] text-white hover:bg-[#3b4754] transition-colors relative">
-                            <span className="material-symbols-outlined text-xl">notifications</span>
-                            <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border border-[#283039]" />
-                        </button>
+                        <NotificationDropdown />
 
                         {/* User Avatar */}
-                        <div
+                        <Link
+                            to={ADMIN_ROUTES.PROFILE}
                             className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-[#283039] cursor-pointer"
                             style={{
                                 backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQhMo4J4VgtN7o9g7aUrJGV74X0ke8FKm-tZmaqrZTGQbAXw3dogSwXCA-rv_tsjXL12P9lRl0mj3qRYrd73mw7KJycrdN8M3u-lI2MsLZZNBMimAQr4BRE6jsSVOB_DD1nOD-8iIkCn2SD3SlgbfTFv0FCmeYnSRAWabCPp49CApY2OCoRuH95dvFnLXzHbF6JiFaiTqGTn9Sj5J2v8kiBkVomQvcX-xRLyWJVJJy5d4I9HJBsYT-_kwUUXywLTyvRZMZaRpIpkE")'

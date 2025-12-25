@@ -1,8 +1,12 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from services.admin_service import AdminService
+from services.admin_profile_service import AdminProfileService
+from services.admin_settings_service import AdminSettingsService
 
 bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 admin_service = AdminService()
+profile_service = AdminProfileService()
+settings_service = AdminSettingsService()
 
 @bp.route('/dashboard/stats', methods=['GET'])
 def get_dashboard_stats():
@@ -163,3 +167,61 @@ def get_user_growth():
     """
     data = admin_service.get_user_growth_data()
     return jsonify(data), 200
+
+# --- Admin Profile Endpoints ---
+
+@bp.route('/profile', methods=['GET'])
+def get_admin_profile():
+    """Get admin profile"""
+    profile = profile_service.get_profile()
+    return jsonify(profile), 200
+
+@bp.route('/profile', methods=['PUT'])
+def update_admin_profile():
+    """Update admin profile"""
+    from flask import request
+    data = request.get_json()
+    profile = profile_service.update_profile(data)
+    return jsonify(profile), 200
+
+@bp.route('/profile/change-password', methods=['POST'])
+def change_admin_password():
+    """Change admin password"""
+    from flask import request
+    data = request.get_json()
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    success, message = profile_service.change_password(current_password, new_password)
+    return jsonify({'success': success, 'message': message}), 200 if success else 400
+
+# --- Admin Settings Endpoints ---
+
+@bp.route('/settings', methods=['GET'])
+def get_admin_settings():
+    """Get all admin settings"""
+    settings = settings_service.get_settings()
+    return jsonify(settings), 200
+
+@bp.route('/settings/general', methods=['PUT'])
+def update_general_settings():
+    """Update general settings"""
+    from flask import request
+    data = request.get_json()
+    settings = settings_service.update_general_settings(data)
+    return jsonify(settings), 200
+
+@bp.route('/settings/security', methods=['PUT'])
+def update_security_settings():
+    """Update security settings"""
+    from flask import request
+    data = request.get_json()
+    settings = settings_service.update_security_settings(data)
+    return jsonify(settings), 200
+
+@bp.route('/settings/performance', methods=['PUT'])
+def update_performance_settings():
+    """Update performance settings"""
+    from flask import request
+    data = request.get_json()
+    settings = settings_service.update_performance_settings(data)
+    return jsonify(settings), 200

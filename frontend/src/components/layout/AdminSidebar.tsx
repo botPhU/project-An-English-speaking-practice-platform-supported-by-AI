@@ -12,11 +12,12 @@ const navItems: NavItem[] = [
     { path: ADMIN_ROUTES.DASHBOARD, icon: 'dashboard', label: 'Bảng điều khiển' },
     { path: ADMIN_ROUTES.USER_MANAGEMENT, icon: 'group', label: 'Quản lý người dùng' },
     { path: ADMIN_ROUTES.MENTOR_MANAGEMENT, icon: 'verified', label: 'Phê duyệt mentor' },
+    { path: ADMIN_ROUTES.PACKAGE_MANAGEMENT, icon: 'inventory_2', label: 'Quản lý gói học' },
     { path: ADMIN_ROUTES.FEEDBACK_MODERATION, icon: 'chat_bubble', label: 'Kiểm duyệt nội dung' },
     { path: ADMIN_ROUTES.LEARNER_SUPPORT, icon: 'support_agent', label: 'Hỗ trợ người học' },
-    { path: ADMIN_ROUTES.PACKAGE_MANAGEMENT, icon: 'inventory_2', label: 'Quản lý gói học' },
     { path: ADMIN_ROUTES.REPORTS, icon: 'analytics', label: 'Báo cáo & Phân tích' },
     { path: ADMIN_ROUTES.POLICY_MANAGEMENT, icon: 'policy', label: 'Quản lý chính sách' },
+    { path: ADMIN_ROUTES.PROFILE, icon: 'account_circle', label: 'Hồ sơ cá nhân' },
 ];
 
 const AdminSidebar: React.FC = () => {
@@ -26,7 +27,8 @@ const AdminSidebar: React.FC = () => {
         if (path === ADMIN_ROUTES.DASHBOARD) {
             return location.pathname === path || location.pathname === '/admin/';
         }
-        return location.pathname.startsWith(path);
+        // For other paths, ensure we match the specific route or its sub-pages
+        return location.pathname === path || location.pathname.startsWith(path + '/');
     };
 
     return (
@@ -73,7 +75,7 @@ const AdminSidebar: React.FC = () => {
                 {/* Footer */}
                 <div className="mt-auto pt-4 border-t border-[#283039]">
                     <Link
-                        to="/admin/settings"
+                        to={ADMIN_ROUTES.SETTINGS}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9dabb9] hover:bg-[#283039] hover:text-white transition-colors"
                     >
                         <span className="material-symbols-outlined text-xl">settings</span>

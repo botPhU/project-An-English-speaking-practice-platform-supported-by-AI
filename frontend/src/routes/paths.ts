@@ -9,6 +9,8 @@ export const ADMIN_ROUTES = {
     LEARNER_SUPPORT: '/admin/support',
     POLICY_MANAGEMENT: '/admin/policies',
     REPORTS: '/admin/reports',
+    PROFILE: '/admin/profile',
+    SETTINGS: '/admin/settings',
 };
 
 // Learner Routes

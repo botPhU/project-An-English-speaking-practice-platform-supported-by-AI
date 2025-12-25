@@ -9,11 +9,14 @@ import PackageManagement from './pages/Admin/PackageManagement'
 import FeedbackModeration from './pages/Admin/FeedbackModeration'
 import LearnerSupport from './pages/Admin/LearnerSupport'
 import PolicyManagement from './pages/Admin/PolicyManagement'
-import PurchaseHistory from './pages/Admin/PurchaseHistory'
 import Reports from './pages/Admin/Reports'
+import AdminProfile from './pages/Admin/AdminProfile'
+import AdminSettings from './pages/Admin/AdminSettings'
+import LearnerDashboard from './pages/Learner/Dashboard'
+import MentorDashboard from './pages/Mentor/Dashboard'
+import LearnerAssessment from './pages/Mentor/LearnerAssessment'
 import Challenges from './pages/Learner/Challenges'
-import Dashboard from './pages/Learner/Dashboard'
-import { ADMIN_ROUTES, AUTH_ROUTES, LEARNER_ROUTES } from './routes/paths'
+import { ADMIN_ROUTES, AUTH_ROUTES, LEARNER_ROUTES, MENTOR_ROUTES } from './routes/paths'
 
 function App() {
   return (
@@ -32,10 +35,16 @@ function App() {
         <Route path={ADMIN_ROUTES.LEARNER_SUPPORT} element={<LearnerSupport />} />
         <Route path={ADMIN_ROUTES.POLICY_MANAGEMENT} element={<PolicyManagement />} />
         <Route path={ADMIN_ROUTES.REPORTS} element={<Reports />} />
+        <Route path={ADMIN_ROUTES.PROFILE} element={<AdminProfile />} />
+        <Route path={ADMIN_ROUTES.SETTINGS} element={<AdminSettings />} />
 
         {/* Learner Routes */}
-        <Route path={LEARNER_ROUTES.DASHBOARD} element={<Dashboard />} />
+        <Route path={LEARNER_ROUTES.DASHBOARD} element={<LearnerDashboard />} />
         <Route path={LEARNER_ROUTES.CHALLENGES} element={<Challenges />} />
+
+        {/* Mentor Routes */}
+        <Route path={MENTOR_ROUTES.DASHBOARD} element={<MentorDashboard />} />
+        <Route path={MENTOR_ROUTES.LEARNER_ASSESSMENT} element={<LearnerAssessment />} />
 
         {/* Redirect root to login */}
         <Route path="/" element={<Navigate to={AUTH_ROUTES.LOGIN} replace />} />

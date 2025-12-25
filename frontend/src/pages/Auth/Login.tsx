@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { ADMIN_ROUTES, LEARNER_ROUTES, MENTOR_ROUTES } from '../../routes/paths';
+import type { User } from '../../types';
 
 // Login page - Đăng nhập (Admin, Learner, Mentor)
 export default function Login() {
@@ -7,10 +10,39 @@ export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
+    const { login } = useAuth();
+    const navigate = useNavigate();
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // TODO: Implement login logic
-        console.log('Login:', { email, password });
+
+        // Giả lập logic phân quyền dựa trên email
+        let role: User['role'] = 'learner';
+        let redirectPath = LEARNER_ROUTES.DASHBOARD;
+
+        if (email.toLowerCase().includes('admin')) {
+            role = 'admin';
+            redirectPath = ADMIN_ROUTES.DASHBOARD;
+        } else if (email.toLowerCase().includes('mentor')) {
+            role = 'mentor';
+            redirectPath = MENTOR_ROUTES.DASHBOARD;
+        }
+
+        const mockUser: User = {
+            id: '1',
+            name: email.split('@')[0],
+            email: email,
+            role: role,
+            isActive: true,
+            createdAt: new Date()
+        };
+
+        // Giả lập đăng nhập
+        login(mockUser, 'mock-token');
+        console.log('Logged in as:', role);
+
+        // Chuyển hướng theo vai trò
+        navigate(redirectPath);
     };
 
     return (
