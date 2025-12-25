@@ -38,6 +38,7 @@ export default function LearnerLayout({ children, title = 'AESP' }: LearnerLayou
                         <NavLink
                             key={item.path}
                             to={item.path}
+                            end={item.path === LEARNER_ROUTES.DASHBOARD}
                             className={({ isActive }) =>
                                 `flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-bold transition-all group ${isActive
                                     ? 'bg-primary/10 text-primary border border-primary/20 shadow-[0_0_20px_rgba(43,140,238,0.1)]'
