@@ -12,6 +12,7 @@ import PolicyManagement from './pages/Admin/PolicyManagement'
 import PurchaseHistory from './pages/Admin/PurchaseHistory'
 import Reports from './pages/Admin/Reports'
 import Challenges from './pages/Learner/Challenges'
+import Dashboard from './pages/Learner/Dashboard'
 import { ADMIN_ROUTES, AUTH_ROUTES, LEARNER_ROUTES } from './routes/paths'
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
         <Route path={ADMIN_ROUTES.REPORTS} element={<Reports />} />
 
         {/* Learner Routes */}
+        <Route path={LEARNER_ROUTES.DASHBOARD} element={<Dashboard />} />
         <Route path={LEARNER_ROUTES.CHALLENGES} element={<Challenges />} />
 
         {/* Redirect root to login */}
