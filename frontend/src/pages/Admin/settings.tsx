@@ -31,7 +31,7 @@ interface SettingsState {
   analyticsEnabled: boolean;
 }
 
-const Settings: React.FC = () => {
+const AdminSettings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'general' | 'security' | 'notifications' | 'integrations' | 'performance'>('general');
   const [settings, setSettings] = useState<SettingsState>({
     // General
@@ -113,8 +113,8 @@ const Settings: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 border-b-[3px] pb-3 pt-2 whitespace-nowrap px-1 transition-colors ${activeTab === tab.id
-                    ? 'border-b-primary text-white'
-                    : 'border-b-transparent text-[#9dabb9] hover:text-white'
+                  ? 'border-b-primary text-white'
+                  : 'border-b-transparent text-[#9dabb9] hover:text-white'
                   }`}
               >
                 <span className={`material-symbols-outlined text-[20px] ${activeTab === tab.id ? 'fill' : ''}`}>
@@ -423,4 +423,4 @@ const Settings: React.FC = () => {
   );
 };
 
-export default Settings;
+export default AdminSettings;
