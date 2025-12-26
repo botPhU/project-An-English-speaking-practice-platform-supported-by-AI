@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { LEARNER_ROUTES } from '../routes/paths';
 
 interface LearnerLayoutProps {
@@ -8,15 +8,24 @@ interface LearnerLayoutProps {
 }
 
 const navItems = [
-    { name: 'Tổng quan', icon: 'dashboard', path: LEARNER_ROUTES.DASHBOARD },
-    { name: 'Lộ trình của tôi', icon: 'map', path: LEARNER_ROUTES.LEARNING_PATH },
-    { name: 'Nhập vai AI', icon: 'smart_toy', path: LEARNER_ROUTES.SPEAKING_PRACTICE },
-    { name: 'Thành tích', icon: 'military_tech', path: LEARNER_ROUTES.CHALLENGES },
-    { name: 'Kết nối Cố vấn', icon: 'groups', path: '/learner/mentors' }, // Placeholder or update if available
-    { name: 'Hồ sơ', icon: 'person', path: LEARNER_ROUTES.PROFILE },
+    { name: 'Tổng quan', icon: 'dashboard', path: LEARNER_ROUTES.DASHBOARD, exact: true },
+    { name: 'Lộ trình của tôi', icon: 'map', path: LEARNER_ROUTES.LEARNING_PATH, exact: false },
+    { name: 'Nhập vai AI', icon: 'smart_toy', path: LEARNER_ROUTES.SPEAKING_PRACTICE, exact: false },
+    { name: 'Thành tích', icon: 'military_tech', path: LEARNER_ROUTES.CHALLENGES, exact: false },
+    { name: 'Kết nối Cố vấn', icon: 'groups', path: '/learner/mentors', exact: false },
+    { name: 'Hồ sơ', icon: 'person', path: LEARNER_ROUTES.PROFILE, exact: false },
 ];
 
 export default function LearnerLayout({ children, title = 'AESP' }: LearnerLayoutProps) {
+    const location = useLocation();
+
+    const isNavActive = (path: string, exact: boolean) => {
+        if (exact) {
+            return location.pathname === path;
+        }
+        return location.pathname.startsWith(path);
+    };
+
     return (
         <div className="flex min-h-screen bg-background-dark text-white font-sans selection:bg-primary/30">
             {/* Sidebar Desktop */}
@@ -34,22 +43,22 @@ export default function LearnerLayout({ children, title = 'AESP' }: LearnerLayou
                 </div>
 
                 <nav className="flex-1 px-4 space-y-1">
-                    {navItems.map((item) => (
-                        <NavLink
-                            key={item.path}
-                            to={item.path}
-                            end={item.path === LEARNER_ROUTES.DASHBOARD}
-                            className={({ isActive }) =>
-                                `flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-bold transition-all group ${isActive
+                    {navItems.map((item) => {
+                        const active = isNavActive(item.path, item.exact);
+                        return (
+                            <NavLink
+                                key={item.path}
+                                to={item.path}
+                                className={`flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-bold transition-all group ${active
                                     ? 'bg-primary/10 text-primary border border-primary/20 shadow-[0_0_20px_rgba(43,140,238,0.1)]'
                                     : 'text-text-secondary hover:bg-white/5 hover:text-white'
-                                }`
-                            }
-                        >
-                            <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">{item.icon}</span>
-                            {item.name}
-                        </NavLink>
-                    ))}
+                                    }`}
+                            >
+                                <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">{item.icon}</span>
+                                {item.name}
+                            </NavLink>
+                        );
+                    })}
                 </nav>
 
                 <div className="p-4 mt-auto">
