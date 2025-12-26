@@ -34,6 +34,15 @@ export const MENTOR_ROUTES = {
     FEEDBACK_SESSION: '/mentor/feedback',
     CONVERSATION_TOPICS: '/mentor/topics',
     EXPERIENCE_SHARING: '/mentor/experience',
+    // New routes from Use Case Diagram
+    REAL_LIFE_SITUATIONS: '/mentor/real-life-situations',
+    COLLOCATIONS_IDIOMS: '/mentor/collocations-idioms',
+    BUILD_CONFIDENCE: '/mentor/build-confidence',
+    WORD_USAGE: '/mentor/word-usage',
+    PRONUNCIATION_ERRORS: '/mentor/pronunciation',
+    GRAMMAR_ERRORS: '/mentor/grammar',
+    CLEAR_EXPRESSION: '/mentor/clear-expression',
+    PROFILE: '/mentor/profile',
 };
 
 // Auth Routes

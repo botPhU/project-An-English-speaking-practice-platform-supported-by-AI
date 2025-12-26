@@ -11,11 +11,24 @@ import LearnerSupport from './pages/Admin/LearnerSupport'
 import PolicyManagement from './pages/Admin/PolicyManagement'
 import Reports from './pages/Admin/Reports'
 import AdminProfile from './pages/Admin/AdminProfile'
-import AdminSettings from './pages/Admin/AdminSettings'
+import AdminSettings from './pages/Admin/settings'
 import LearnerDashboard from './pages/Learner/Dashboard'
+import Challenges from './pages/Learner/Challenges'
+// Mentor Pages
 import MentorDashboard from './pages/Mentor/Dashboard'
 import LearnerAssessment from './pages/Mentor/LearnerAssessment'
-import Challenges from './pages/Learner/Challenges'
+import Resources from './pages/Mentor/Resources'
+import FeedbackSession from './pages/Mentor/FeedbackSession'
+import ConversationTopics from './pages/Mentor/ConversationTopics'
+import ExperienceSharing from './pages/Mentor/ExperienceSharing'
+import RealLifeSituations from './pages/Mentor/RealLifeSituations'
+import CollocationsIdioms from './pages/Mentor/CollocationsIdioms'
+import BuildConfidence from './pages/Mentor/BuildConfidence'
+import WordUsageCorrection from './pages/Mentor/WordUsageCorrection'
+import PronunciationErrors from './pages/Mentor/PronunciationErrors'
+import GrammarErrors from './pages/Mentor/GrammarErrors'
+import ClearExpression from './pages/Mentor/ClearExpression'
+import MentorProfile from './pages/Mentor/Profile'
 import { ADMIN_ROUTES, AUTH_ROUTES, LEARNER_ROUTES, MENTOR_ROUTES } from './routes/paths'
 
 function App() {
@@ -45,6 +58,18 @@ function App() {
         {/* Mentor Routes */}
         <Route path={MENTOR_ROUTES.DASHBOARD} element={<MentorDashboard />} />
         <Route path={MENTOR_ROUTES.LEARNER_ASSESSMENT} element={<LearnerAssessment />} />
+        <Route path={MENTOR_ROUTES.RESOURCES} element={<Resources />} />
+        <Route path={MENTOR_ROUTES.FEEDBACK_SESSION} element={<FeedbackSession />} />
+        <Route path={MENTOR_ROUTES.CONVERSATION_TOPICS} element={<ConversationTopics />} />
+        <Route path={MENTOR_ROUTES.EXPERIENCE_SHARING} element={<ExperienceSharing />} />
+        <Route path={MENTOR_ROUTES.REAL_LIFE_SITUATIONS} element={<RealLifeSituations />} />
+        <Route path={MENTOR_ROUTES.COLLOCATIONS_IDIOMS} element={<CollocationsIdioms />} />
+        <Route path={MENTOR_ROUTES.BUILD_CONFIDENCE} element={<BuildConfidence />} />
+        <Route path={MENTOR_ROUTES.WORD_USAGE} element={<WordUsageCorrection />} />
+        <Route path={MENTOR_ROUTES.PRONUNCIATION_ERRORS} element={<PronunciationErrors />} />
+        <Route path={MENTOR_ROUTES.GRAMMAR_ERRORS} element={<GrammarErrors />} />
+        <Route path={MENTOR_ROUTES.CLEAR_EXPRESSION} element={<ClearExpression />} />
+        <Route path={MENTOR_ROUTES.PROFILE} element={<MentorProfile />} />
 
         {/* Redirect root to login */}
         <Route path="/" element={<Navigate to={AUTH_ROUTES.LOGIN} replace />} />
