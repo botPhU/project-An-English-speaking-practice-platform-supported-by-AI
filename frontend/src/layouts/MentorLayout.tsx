@@ -1,6 +1,6 @@
 import MentorSidebar from '../components/layout/MentorSidebar';
 import NotificationDropdown from '../components/layout/NotificationDropdown';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { MENTOR_ROUTES } from '../routes/paths';
 
 interface MentorLayoutProps {

@@ -14,6 +14,7 @@ import AdminProfile from './pages/Admin/AdminProfile'
 import AdminSettings from './pages/Admin/settings'
 import LearnerDashboard from './pages/Learner/Dashboard'
 import Challenges from './pages/Learner/Challenges'
+import LearningPath from './pages/Learner/LearningPath'
 // Mentor Pages
 import MentorDashboard from './pages/Mentor/Dashboard'
 import LearnerAssessment from './pages/Mentor/LearnerAssessment'
@@ -53,6 +54,7 @@ function App() {
 
         {/* Learner Routes */}
         <Route path={LEARNER_ROUTES.DASHBOARD} element={<LearnerDashboard />} />
+        <Route path={LEARNER_ROUTES.LEARNING_PATH} element={<LearningPath />} />
         <Route path={LEARNER_ROUTES.CHALLENGES} element={<Challenges />} />
 
         {/* Mentor Routes */}
