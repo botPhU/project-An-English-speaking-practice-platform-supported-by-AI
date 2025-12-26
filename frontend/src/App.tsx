@@ -18,6 +18,7 @@ import LearningPath from './pages/Learner/LearningPath'
 import Packages from './pages/Learner/Packages'
 import ProficiencyTest from './pages/Learner/ProficiencyTest'
 import LearnerProfile from './pages/Learner/Profile'
+import TopicSelection from './pages/Learner/TopicSelection'
 // Mentor Pages
 import MentorDashboard from './pages/Mentor/Dashboard'
 import LearnerAssessment from './pages/Mentor/LearnerAssessment'
@@ -62,6 +63,7 @@ function App() {
         <Route path={LEARNER_ROUTES.PROFICIENCY_TEST} element={<ProficiencyTest />} />
         <Route path={LEARNER_ROUTES.CHALLENGES} element={<Challenges />} />
         <Route path={LEARNER_ROUTES.PROFILE} element={<LearnerProfile />} />
+        <Route path={LEARNER_ROUTES.SPEAKING_PRACTICE} element={<TopicSelection />} />
 
         {/* Mentor Routes */}
         <Route path={MENTOR_ROUTES.DASHBOARD} element={<MentorDashboard />} />
