@@ -16,6 +16,8 @@ import LearnerDashboard from './pages/Learner/Dashboard'
 import Challenges from './pages/Learner/Challenges'
 import LearningPath from './pages/Learner/LearningPath'
 import Packages from './pages/Learner/Packages'
+import ProficiencyTest from './pages/Learner/ProficiencyTest'
+import LearnerProfile from './pages/Learner/Profile'
 // Mentor Pages
 import MentorDashboard from './pages/Mentor/Dashboard'
 import LearnerAssessment from './pages/Mentor/LearnerAssessment'
@@ -57,7 +59,9 @@ function App() {
         <Route path={LEARNER_ROUTES.DASHBOARD} element={<LearnerDashboard />} />
         <Route path={LEARNER_ROUTES.LEARNING_PATH} element={<LearningPath />} />
         <Route path={LEARNER_ROUTES.PACKAGES} element={<Packages />} />
+        <Route path={LEARNER_ROUTES.PROFICIENCY_TEST} element={<ProficiencyTest />} />
         <Route path={LEARNER_ROUTES.CHALLENGES} element={<Challenges />} />
+        <Route path={LEARNER_ROUTES.PROFILE} element={<LearnerProfile />} />
 
         {/* Mentor Routes */}
         <Route path={MENTOR_ROUTES.DASHBOARD} element={<MentorDashboard />} />
