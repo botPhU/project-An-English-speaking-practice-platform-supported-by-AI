@@ -13,10 +13,9 @@ import Reports from './pages/Admin/Reports'
 import AdminProfile from './pages/Admin/AdminProfile'
 import AdminSettings from './pages/Admin/settings'
 import LearnerDashboard from './pages/Learner/Dashboard'
-import Challenges from './pages/Learner/Challenges'
+import Achievements from './pages/Learner/Challenges' // Renamed to Achievements
 import LearningPath from './pages/Learner/LearningPath'
 import Packages from './pages/Learner/Packages'
-import ProficiencyTest from './pages/Learner/ProficiencyTest'
 import LearnerProfile from './pages/Learner/Profile'
 import TopicSelection from './pages/Learner/TopicSelection'
 // Mentor Pages
@@ -56,12 +55,11 @@ function App() {
         <Route path={ADMIN_ROUTES.PROFILE} element={<AdminProfile />} />
         <Route path={ADMIN_ROUTES.SETTINGS} element={<AdminSettings />} />
 
-        {/* Learner Routes */}
+        {/* Learner Routes - Simplified paths */}
         <Route path={LEARNER_ROUTES.DASHBOARD} element={<LearnerDashboard />} />
         <Route path={LEARNER_ROUTES.LEARNING_PATH} element={<LearningPath />} />
         <Route path={LEARNER_ROUTES.PACKAGES} element={<Packages />} />
-        <Route path={LEARNER_ROUTES.PROFICIENCY_TEST} element={<ProficiencyTest />} />
-        <Route path={LEARNER_ROUTES.CHALLENGES} element={<Challenges />} />
+        <Route path={LEARNER_ROUTES.ACHIEVEMENTS} element={<Achievements />} />
         <Route path={LEARNER_ROUTES.PROFILE} element={<LearnerProfile />} />
         <Route path={LEARNER_ROUTES.SPEAKING_PRACTICE} element={<TopicSelection />} />
 

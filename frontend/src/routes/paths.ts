@@ -13,17 +13,15 @@ export const ADMIN_ROUTES = {
     SETTINGS: '/admin/settings',
 };
 
-// Learner Routes
+// Learner Routes - Simplified paths
 export const LEARNER_ROUTES = {
-    DASHBOARD: '/learner',
-    PROFILE: '/learner/profile',
-    PROFICIENCY_TEST: '/learner/proficiency-test',
-    LEARNING_PATH: '/learner/learning-path',
-    SPEAKING_PRACTICE: '/learner/practice',
-    TOPIC_SELECTION: '/learner/topics',
-    PROGRESS: '/learner/progress',
-    CHALLENGES: '/learner/challenges',
-    PACKAGES: '/learner/packages',
+    DASHBOARD: '/dashboard',
+    PROFILE: '/profile',
+    LEARNING_PATH: '/learning-path',
+    SPEAKING_PRACTICE: '/practice',
+    PROGRESS: '/progress',
+    ACHIEVEMENTS: '/achievements',  // Changed from CHALLENGES
+    PACKAGES: '/packages',
 };
 
 // Mentor Routes
@@ -34,7 +32,6 @@ export const MENTOR_ROUTES = {
     FEEDBACK_SESSION: '/mentor/feedback',
     CONVERSATION_TOPICS: '/mentor/topics',
     EXPERIENCE_SHARING: '/mentor/experience',
-    // New routes from Use Case Diagram
     REAL_LIFE_SITUATIONS: '/mentor/real-life-situations',
     COLLOCATIONS_IDIOMS: '/mentor/collocations-idioms',
     BUILD_CONFIDENCE: '/mentor/build-confidence',

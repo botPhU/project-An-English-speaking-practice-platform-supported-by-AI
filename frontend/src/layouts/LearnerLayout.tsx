@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { LEARNER_ROUTES } from '../routes/paths';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { LEARNER_ROUTES, AUTH_ROUTES } from '../routes/paths';
 
 interface LearnerLayoutProps {
     children: ReactNode;
@@ -11,19 +11,26 @@ const navItems = [
     { name: 'Tổng quan', icon: 'dashboard', path: LEARNER_ROUTES.DASHBOARD, exact: true },
     { name: 'Lộ trình của tôi', icon: 'map', path: LEARNER_ROUTES.LEARNING_PATH, exact: false },
     { name: 'Nhập vai AI', icon: 'smart_toy', path: LEARNER_ROUTES.SPEAKING_PRACTICE, exact: false },
-    { name: 'Thành tích', icon: 'military_tech', path: LEARNER_ROUTES.CHALLENGES, exact: false },
-    { name: 'Kết nối Cố vấn', icon: 'groups', path: '/learner/mentors', exact: false },
+    { name: 'Thành tích', icon: 'military_tech', path: LEARNER_ROUTES.ACHIEVEMENTS, exact: false },
+    { name: 'Gói dịch vụ', icon: 'redeem', path: LEARNER_ROUTES.PACKAGES, exact: false },
     { name: 'Hồ sơ', icon: 'person', path: LEARNER_ROUTES.PROFILE, exact: false },
 ];
 
 export default function LearnerLayout({ children, title = 'AESP' }: LearnerLayoutProps) {
     const location = useLocation();
+    const navigate = useNavigate();
 
     const isNavActive = (path: string, exact: boolean) => {
         if (exact) {
             return location.pathname === path;
         }
         return location.pathname.startsWith(path);
+    };
+
+    const handleLogout = () => {
+        // Clear any auth tokens/session if needed
+        // localStorage.removeItem('token');
+        navigate(AUTH_ROUTES.LOGIN);
     };
 
     return (
@@ -62,7 +69,10 @@ export default function LearnerLayout({ children, title = 'AESP' }: LearnerLayou
                 </nav>
 
                 <div className="p-4 mt-auto">
-                    <button className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl text-sm font-bold text-text-secondary hover:bg-red-500/10 hover:text-red-400 transition-all group">
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl text-sm font-bold text-text-secondary hover:bg-red-500/10 hover:text-red-400 transition-all group"
+                    >
                         <span className="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform">logout</span>
                         Đăng xuất
                     </button>
