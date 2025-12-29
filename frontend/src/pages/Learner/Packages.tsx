@@ -1,6 +1,15 @@
+import { useState } from 'react';
 import LearnerLayout from '../../layouts/LearnerLayout';
 
 export default function Packages() {
+    const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+
+    const prices = {
+        starter: { monthly: 199, yearly: 159 },
+        accelerator: { monthly: 499, yearly: 399 },
+        intensive: { monthly: 999, yearly: 799 },
+    };
+
     return (
         <LearnerLayout title="Gói Học & Thanh Toán">
             <div className="max-w-[1200px] mx-auto space-y-8">
@@ -15,33 +24,76 @@ export default function Packages() {
                     </p>
                 </div>
 
+                {/* Current Subscription Section */}
+                <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/30 rounded-2xl p-6 mb-8">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="size-14 rounded-xl bg-primary/20 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-primary text-3xl">rocket_launch</span>
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="text-white font-bold text-lg">Gói Tăng Tốc</h3>
+                                    <span className="text-[10px] font-bold text-green-500 bg-green-500/20 px-2 py-0.5 rounded uppercase">Đang hoạt động</span>
+                                </div>
+                                <p className="text-text-secondary text-sm">Gia hạn tự động: 15/01/2025 • <span className="text-primary font-bold">499,000 VNĐ/tháng</span></p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button className="px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-colors flex items-center gap-2">
+                                <span className="material-symbols-outlined text-lg">upgrade</span>
+                                Nâng cấp
+                            </button>
+                            <button className="px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-text-secondary font-bold text-sm transition-colors flex items-center gap-2">
+                                <span className="material-symbols-outlined text-lg">download</span>
+                                Hạ gói
+                            </button>
+                            <button className="px-4 py-2.5 rounded-lg hover:bg-red-500/10 text-red-400 font-bold text-sm transition-colors flex items-center gap-2">
+                                <span className="material-symbols-outlined text-lg">cancel</span>
+                                Hủy gói
+                            </button>
+                        </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap gap-6">
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="material-symbols-outlined text-green-500 text-lg">check_circle</span>
+                            <span className="text-text-secondary">2 buổi Mentor còn lại tuần này</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="material-symbols-outlined text-primary text-lg">history</span>
+                            <span className="text-text-secondary">Đã sử dụng 15 ngày</span>
+                        </div>
+                        <button className="text-primary font-bold text-sm hover:underline flex items-center gap-1">
+                            <span className="material-symbols-outlined text-lg">receipt_long</span>
+                            Xem lịch sử thanh toán
+                        </button>
+                    </div>
+                </div>
+
                 {/* Billing Toggle */}
                 <div className="flex justify-center py-3 mb-8">
                     <div className="flex h-12 w-full max-w-md items-center justify-center rounded-xl bg-surface-dark p-1 relative">
-                        <label className="cursor-pointer z-10 w-1/2 h-full flex items-center justify-center rounded-lg transition-all has-[:checked]:bg-background-dark has-[:checked]:shadow-sm has-[:checked]:text-primary text-text-secondary font-bold text-sm">
-                            <span className="truncate">Thanh toán tháng</span>
-                            <input
-                                defaultChecked
-                                className="invisible w-0 absolute"
-                                name="billing_cycle"
-                                type="radio"
-                                defaultValue="monthly"
-                            />
-                        </label>
-                        <label className="cursor-pointer z-10 w-1/2 h-full flex items-center justify-center rounded-lg transition-all has-[:checked]:bg-background-dark has-[:checked]:shadow-sm has-[:checked]:text-primary text-text-secondary font-bold text-sm">
-                            <span className="truncate flex items-center gap-2">
-                                Thanh toán năm
-                                <span className="bg-green-900/30 text-green-400 text-[10px] px-2 py-0.5 rounded-full">
-                                    -20%
-                                </span>
+                        <button
+                            onClick={() => setBillingCycle('monthly')}
+                            className={`cursor-pointer z-10 w-1/2 h-full flex items-center justify-center rounded-lg transition-all font-bold text-sm ${billingCycle === 'monthly'
+                                ? 'bg-background-dark shadow-sm text-primary'
+                                : 'text-text-secondary hover:text-white'
+                                }`}
+                        >
+                            Thanh toán tháng
+                        </button>
+                        <button
+                            onClick={() => setBillingCycle('yearly')}
+                            className={`cursor-pointer z-10 w-1/2 h-full flex items-center justify-center rounded-lg transition-all font-bold text-sm gap-2 ${billingCycle === 'yearly'
+                                ? 'bg-background-dark shadow-sm text-primary'
+                                : 'text-text-secondary hover:text-white'
+                                }`}
+                        >
+                            Thanh toán năm
+                            <span className="bg-green-900/30 text-green-400 text-[10px] px-2 py-0.5 rounded-full">
+                                -20%
                             </span>
-                            <input
-                                className="invisible w-0 absolute"
-                                name="billing_cycle"
-                                type="radio"
-                                defaultValue="yearly"
-                            />
-                        </label>
+                        </button>
                     </div>
                 </div>
 
@@ -64,11 +116,14 @@ export default function Packages() {
                             <div className="my-4 h-px w-full bg-border-dark" />
                             <p className="flex items-baseline gap-1 text-white">
                                 <span className="text-4xl font-black leading-tight tracking-[-0.033em]">
-                                    199k
+                                    {prices.starter[billingCycle]}k
                                 </span>
                                 <span className="text-base font-bold text-text-secondary">
-                                    /tháng
+                                    /{billingCycle === 'monthly' ? 'tháng' : 'năm'}
                                 </span>
+                                {billingCycle === 'yearly' && (
+                                    <span className="text-xs text-green-400 ml-2">Tiết kiệm 480k</span>
+                                )}
                             </p>
                         </div>
                         <button className="w-full cursor-pointer rounded-xl h-12 px-4 bg-white/10 hover:bg-white/20 text-white text-sm font-bold leading-normal transition-colors">
@@ -122,10 +177,10 @@ export default function Packages() {
                             <div className="my-4 h-px w-full bg-border-dark" />
                             <p className="flex items-baseline gap-1 text-white">
                                 <span className="text-4xl font-black leading-tight tracking-[-0.033em]">
-                                    499k
+                                    {prices.accelerator[billingCycle]}k
                                 </span>
                                 <span className="text-base font-bold text-text-secondary">
-                                    /tháng
+                                    /{billingCycle === 'monthly' ? 'tháng' : 'năm'}
                                 </span>
                             </p>
                         </div>
@@ -179,11 +234,14 @@ export default function Packages() {
                             <div className="my-4 h-px w-full bg-border-dark" />
                             <p className="flex items-baseline gap-1 text-white">
                                 <span className="text-4xl font-black leading-tight tracking-[-0.033em]">
-                                    999k
+                                    {prices.intensive[billingCycle]}k
                                 </span>
                                 <span className="text-base font-bold text-text-secondary">
-                                    /tháng
+                                    /{billingCycle === 'monthly' ? 'tháng' : 'năm'}
                                 </span>
+                                {billingCycle === 'yearly' && (
+                                    <span className="text-xs text-green-400 ml-2">Tiết kiệm 2.4tr</span>
+                                )}
                             </p>
                         </div>
                         <button className="w-full cursor-pointer rounded-xl h-12 px-4 bg-white/10 hover:bg-white/20 text-white text-sm font-bold leading-normal transition-colors">
@@ -391,7 +449,7 @@ export default function Packages() {
                         </div>
                     </div>
                 </div>
-            </div>
-        </LearnerLayout>
+            </div >
+        </LearnerLayout >
     );
 }

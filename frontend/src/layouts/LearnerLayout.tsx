@@ -9,9 +9,10 @@ interface LearnerLayoutProps {
 
 const navItems = [
     { name: 'Tổng quan', icon: 'dashboard', path: LEARNER_ROUTES.DASHBOARD, exact: true },
-    { name: 'Lộ trình của tôi', icon: 'map', path: LEARNER_ROUTES.LEARNING_PATH, exact: false },
     { name: 'Nhập vai AI', icon: 'smart_toy', path: LEARNER_ROUTES.SPEAKING_PRACTICE, exact: false },
-    { name: 'Thành tích', icon: 'military_tech', path: LEARNER_ROUTES.ACHIEVEMENTS, exact: false },
+    { name: 'Thử thách', icon: 'emoji_events', path: LEARNER_ROUTES.CHALLENGES, exact: false },
+    { name: 'Cộng đồng', icon: 'groups', path: LEARNER_ROUTES.COMMUNITY, exact: false },
+    { name: 'Tiến độ', icon: 'trending_up', path: LEARNER_ROUTES.PROGRESS, exact: false },
     { name: 'Gói dịch vụ', icon: 'redeem', path: LEARNER_ROUTES.PACKAGES, exact: false },
     { name: 'Hồ sơ', icon: 'person', path: LEARNER_ROUTES.PROFILE, exact: false },
 ];

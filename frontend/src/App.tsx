@@ -12,12 +12,14 @@ import PolicyManagement from './pages/Admin/PolicyManagement'
 import Reports from './pages/Admin/Reports'
 import AdminProfile from './pages/Admin/AdminProfile'
 import AdminSettings from './pages/Admin/settings'
+// Learner Pages
 import LearnerDashboard from './pages/Learner/Dashboard'
-import Achievements from './pages/Learner/Challenges' // Renamed to Achievements
-import LearningPath from './pages/Learner/LearningPath'
+import Progress from './pages/Learner/Progress'
 import Packages from './pages/Learner/Packages'
 import LearnerProfile from './pages/Learner/Profile'
 import TopicSelection from './pages/Learner/TopicSelection'
+import Community from './pages/Learner/Community'
+import Challenges from './pages/Learner/Challenges'
 // Mentor Pages
 import MentorDashboard from './pages/Mentor/Dashboard'
 import LearnerAssessment from './pages/Mentor/LearnerAssessment'
@@ -55,13 +57,14 @@ function App() {
         <Route path={ADMIN_ROUTES.PROFILE} element={<AdminProfile />} />
         <Route path={ADMIN_ROUTES.SETTINGS} element={<AdminSettings />} />
 
-        {/* Learner Routes - Simplified paths */}
+        {/* Learner Routes - Aligned with Use Case Diagram */}
         <Route path={LEARNER_ROUTES.DASHBOARD} element={<LearnerDashboard />} />
-        <Route path={LEARNER_ROUTES.LEARNING_PATH} element={<LearningPath />} />
-        <Route path={LEARNER_ROUTES.PACKAGES} element={<Packages />} />
-        <Route path={LEARNER_ROUTES.ACHIEVEMENTS} element={<Achievements />} />
-        <Route path={LEARNER_ROUTES.PROFILE} element={<LearnerProfile />} />
         <Route path={LEARNER_ROUTES.SPEAKING_PRACTICE} element={<TopicSelection />} />
+        <Route path={LEARNER_ROUTES.CHALLENGES} element={<Challenges />} />
+        <Route path={LEARNER_ROUTES.COMMUNITY} element={<Community />} />
+        <Route path={LEARNER_ROUTES.PROGRESS} element={<Progress />} />
+        <Route path={LEARNER_ROUTES.PACKAGES} element={<Packages />} />
+        <Route path={LEARNER_ROUTES.PROFILE} element={<LearnerProfile />} />
 
         {/* Mentor Routes */}
         <Route path={MENTOR_ROUTES.DASHBOARD} element={<MentorDashboard />} />

@@ -137,6 +137,39 @@ export default function Dashboard() {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Schedule Section */}
+                        <section className="bg-surface-dark rounded-2xl border border-border-dark p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h4 className="font-black flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-primary">calendar_month</span>
+                                    Lịch học tuần này
+                                </h4>
+                                <button className="text-primary text-xs font-black uppercase tracking-widest hover:underline">
+                                    Xem tất cả
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                {[
+                                    { day: 'Hôm nay', time: '19:00', title: 'Giao tiếp: Du lịch', type: 'AI Practice', status: 'upcoming', color: 'border-primary' },
+                                    { day: 'T3, 31/12', time: '20:00', title: 'Phát âm: Âm cuối', type: 'Lesson', status: 'scheduled', color: 'border-purple-500' },
+                                    { day: 'T5, 02/01', time: '18:30', title: 'Ngữ pháp: Thì tương lai', type: 'Quiz', status: 'scheduled', color: 'border-green-500' },
+                                ].map((item, index) => (
+                                    <div key={index} className={`flex items-center gap-4 p-4 rounded-xl bg-white/5 border-l-4 ${item.color} hover:bg-white/10 transition-colors cursor-pointer`}>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-xs font-bold text-text-secondary">{item.day}</span>
+                                                <span className="text-xs text-text-secondary">•</span>
+                                                <span className="text-xs font-bold text-primary">{item.time}</span>
+                                            </div>
+                                            <h5 className="font-bold text-white truncate">{item.title}</h5>
+                                            <span className="text-[10px] uppercase tracking-wider text-text-secondary">{item.type}</span>
+                                        </div>
+                                        <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
                     </div>
 
                     {/* Right Column: Challenges & Social */}

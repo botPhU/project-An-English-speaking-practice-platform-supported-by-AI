@@ -13,14 +13,14 @@ export const ADMIN_ROUTES = {
     SETTINGS: '/admin/settings',
 };
 
-// Learner Routes - Simplified paths
+// Learner Routes - Aligned with Use Case Diagram
 export const LEARNER_ROUTES = {
     DASHBOARD: '/dashboard',
     PROFILE: '/profile',
-    LEARNING_PATH: '/learning-path',
     SPEAKING_PRACTICE: '/practice',
-    PROGRESS: '/progress',
-    ACHIEVEMENTS: '/achievements',  // Changed from CHALLENGES
+    CHALLENGES: '/challenges',  // Speaking Challenges
+    COMMUNITY: '/community',    // Practice with Others, Reviews, Mentors
+    PROGRESS: '/progress',      // Performance Reports, Tracking, AI Feedback, Scoring
     PACKAGES: '/packages',
 };
 
