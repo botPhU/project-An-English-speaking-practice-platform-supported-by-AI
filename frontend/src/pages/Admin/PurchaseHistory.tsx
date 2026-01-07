@@ -1,20 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/layout';
+import { adminService } from '../../services/adminService';
 
-// Mock data for transactions
-const mockTransactions = [
-    { id: 'TXN001', user: 'Nguyễn Văn A', email: 'nguyenvana@email.com', package: 'Premium 1 tháng', amount: 299000, date: '2024-12-20', status: 'completed' },
-    { id: 'TXN002', user: 'Trần Thị B', email: 'tranthib@email.com', package: 'Basic 3 tháng', amount: 449000, date: '2024-12-19', status: 'completed' },
-    { id: 'TXN003', user: 'Lê Văn C', email: 'levanc@email.com', package: 'Premium 6 tháng', amount: 1499000, date: '2024-12-19', status: 'pending' },
-    { id: 'TXN004', user: 'Phạm Thị D', email: 'phamthid@email.com', package: 'Basic 1 tháng', amount: 149000, date: '2024-12-18', status: 'failed' },
-    { id: 'TXN005', user: 'Hoàng Văn E', email: 'hoangvane@email.com', package: 'Premium 1 năm', amount: 2699000, date: '2024-12-18', status: 'completed' },
-];
+interface Transaction {
+    id: string;
+    user: string;
+    email: string;
+    package: string;
+    amount: number;
+    date: string;
+    status: 'completed' | 'pending' | 'failed';
+}
 
 export default function PurchaseHistory() {
-    const [transactions] = useState(mockTransactions);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterPackage, setFilterPackage] = useState('all');
     const [dateRange, setDateRange] = useState({ from: '', to: '' });
+
+    useEffect(() => {
+        fetchPurchaseHistory();
+    }, []);
+
+    const fetchPurchaseHistory = async () => {
+        try {
+            setLoading(true);
+            const response = await adminService.getPurchaseHistory();
+            // Map API response to expected format
+            const mappedData = (response.data || []).map((p: any) => ({
+                id: p.id || p.transaction_id || `TXN${p.id}`,
+                user: p.user_name || p.full_name || 'Unknown User',
+                email: p.email || '',
+                package: p.package_name || p.plan_name || 'Unknown Package',
+                amount: p.amount || p.price || 0,
+                date: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : '',
+                status: p.status || 'completed'
+            }));
+            setTransactions(mappedData);
+        } catch (error) {
+            console.error('Error fetching purchase history:', error);
+            setTransactions([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);

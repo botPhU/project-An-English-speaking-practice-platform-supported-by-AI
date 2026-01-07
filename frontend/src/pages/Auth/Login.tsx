@@ -1,48 +1,67 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { authService } from '../../services/authService';
 import { ADMIN_ROUTES, LEARNER_ROUTES, MENTOR_ROUTES } from '../../routes/paths';
 import type { User } from '../../types';
 
 // Login page - Đăng nhập (Admin, Learner, Mentor)
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
-    const [email, setEmail] = useState('');
+    const [userName, setUserName] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
 
-        // Giả lập logic phân quyền dựa trên email
-        let role: User['role'] = 'learner';
-        let redirectPath = LEARNER_ROUTES.DASHBOARD;
-
-        if (email.toLowerCase().includes('admin')) {
-            role = 'admin';
-            redirectPath = ADMIN_ROUTES.DASHBOARD;
-        } else if (email.toLowerCase().includes('mentor')) {
-            role = 'mentor';
-            redirectPath = MENTOR_ROUTES.DASHBOARD;
+        if (!userName || !password) {
+            setError('Vui lòng nhập tên đăng nhập và mật khẩu');
+            return;
         }
 
-        const mockUser: User = {
-            id: '1',
-            name: email.split('@')[0],
-            email: email,
-            role: role,
-            isActive: true,
-            createdAt: new Date()
-        };
+        setLoading(true);
 
-        // Giả lập đăng nhập
-        login(mockUser, 'mock-token');
-        console.log('Logged in as:', role);
+        try {
+            const response = await authService.login(userName, password);
 
-        // Chuyển hướng theo vai trò
-        navigate(redirectPath);
+            // Save tokens
+            localStorage.setItem('accessToken', response.data.access_token);
+            localStorage.setItem('refreshToken', response.data.refresh_token);
+
+            const userData = response.data.user;
+
+            // Determine redirect path based on role
+            let redirectPath = LEARNER_ROUTES.DASHBOARD;
+            if (userData.role === 'admin') {
+                redirectPath = ADMIN_ROUTES.DASHBOARD;
+            } else if (userData.role === 'mentor') {
+                redirectPath = MENTOR_ROUTES.DASHBOARD;
+            }
+
+            // Convert to app User type
+            const appUser: User = {
+                id: String(userData.id),
+                name: userData.full_name || userData.user_name,
+                email: userData.email,
+                role: userData.role as User['role'],
+                isActive: true,
+                createdAt: new Date()
+            };
+
+            login(appUser, response.data.access_token);
+            navigate(redirectPath);
+        } catch (err: any) {
+            console.error('Login error:', err);
+            setError(err.response?.data?.error || 'Đăng nhập thất bại. Vui lòng kiểm tra tên đăng nhập và mật khẩu.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -114,21 +133,29 @@ export default function Login() {
 
                     {/* Login Form */}
                     <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-                        {/* Email Field */}
+                        {/* Error Message */}
+                        {error && (
+                            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                                {error}
+                            </div>
+                        )}
+
+                        {/* Username Field */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[#111418] dark:text-white text-base font-medium leading-normal">
-                                Email hoặc Tên đăng nhập
+                                Tên đăng nhập <span className="text-red-500">*</span>
                             </label>
                             <div className="flex w-full items-stretch rounded-lg h-14 relative group">
                                 <div className="absolute left-0 top-0 bottom-0 pl-4 flex items-center pointer-events-none z-10 text-[#637588] dark:text-[#9dabb9]">
                                     <span className="material-symbols-outlined text-[24px]">person</span>
                                 </div>
                                 <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    type="text"
+                                    value={userName}
+                                    onChange={(e) => setUserName(e.target.value)}
                                     className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] dark:text-white focus:ring-2 focus:ring-[#2b8cee]/50 border border-[#dce0e5] dark:border-[#3b4754] bg-white dark:bg-[#1c2127] focus:border-[#2b8cee] h-full placeholder:text-[#9dabb9] pl-12 pr-4 text-base font-normal leading-normal transition-all duration-200"
-                                    placeholder="nhap_email_cua_ban@example.com"
+                                    placeholder="Nhập tên đăng nhập"
+                                    required
                                 />
                             </div>
                         </div>
@@ -137,7 +164,7 @@ export default function Login() {
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-[#111418] dark:text-white text-base font-medium leading-normal">
-                                    Mật khẩu
+                                    Mật khẩu <span className="text-red-500">*</span>
                                 </label>
                                 <a className="text-sm font-bold text-[#2b8cee] hover:text-[#2b8cee]/80 transition-colors cursor-pointer">
                                     Quên mật khẩu?
@@ -153,6 +180,7 @@ export default function Login() {
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] dark:text-white focus:ring-2 focus:ring-[#2b8cee]/50 border border-[#dce0e5] dark:border-[#3b4754] bg-white dark:bg-[#1c2127] focus:border-[#2b8cee] h-full placeholder:text-[#9dabb9] pl-12 pr-12 text-base font-normal leading-normal transition-all duration-200"
                                     placeholder="Nhập mật khẩu"
+                                    required
                                 />
                                 <button
                                     type="button"
@@ -169,9 +197,10 @@ export default function Login() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#2b8cee] hover:bg-[#2b8cee]/90 text-white text-base font-bold leading-normal tracking-[0.015em] transition-all duration-200 shadow-lg shadow-[#2b8cee]/20 mt-2"
+                            disabled={loading}
+                            className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#2b8cee] hover:bg-[#2b8cee]/90 text-white text-base font-bold leading-normal tracking-[0.015em] transition-all duration-200 shadow-lg shadow-[#2b8cee]/20 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <span className="truncate">Đăng nhập</span>
+                            <span className="truncate">{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</span>
                         </button>
                     </form>
 

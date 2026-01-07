@@ -225,3 +225,142 @@ def update_performance_settings():
     data = request.get_json()
     settings = settings_service.update_performance_settings(data)
     return jsonify(settings), 200
+
+
+# --- Mentor Management Endpoints ---
+
+@bp.route('/mentors', methods=['GET'])
+def get_all_mentors():
+    """
+    Get all mentors
+    ---
+    tags:
+      - Admin - Mentor Management
+    parameters:
+      - name: status
+        in: query
+        type: string
+        enum: [all, active, pending, inactive]
+      - name: page
+        in: query
+        type: integer
+      - name: limit
+        in: query
+        type: integer
+    responses:
+      200:
+        description: List of mentors
+    """
+    from flask import request
+    status = request.args.get('status', 'all')
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 10, type=int)
+    mentors = admin_service.get_mentors(status, page, limit)
+    return jsonify(mentors), 200
+
+
+@bp.route('/mentors/<int:mentor_id>', methods=['GET'])
+def get_mentor_details(mentor_id):
+    """Get mentor details"""
+    mentor = admin_service.get_mentor_by_id(mentor_id)
+    if mentor:
+        return jsonify(mentor), 200
+    return jsonify({'error': 'Mentor not found'}), 404
+
+
+@bp.route('/mentors/<int:mentor_id>/status', methods=['PUT'])
+def update_mentor_status(mentor_id):
+    """Update mentor status (active/inactive)"""
+    from flask import request
+    data = request.get_json()
+    new_status = data.get('status')
+    result = admin_service.update_mentor_status(mentor_id, new_status)
+    return jsonify({'message': f'Mentor status updated to {new_status}'}), 200
+
+
+@bp.route('/mentors/<int:mentor_id>/approve', methods=['POST'])
+def approve_mentor(mentor_id):
+    """Approve a pending mentor"""
+    result = admin_service.approve_mentor(mentor_id)
+    return jsonify({'message': 'Mentor approved successfully'}), 200
+
+
+@bp.route('/mentors/pending', methods=['GET'])
+def get_pending_mentors():
+    """Get mentors pending approval"""
+    mentors = admin_service.get_pending_mentors()
+    return jsonify(mentors), 200
+
+
+@bp.route('/mentors/stats', methods=['GET'])
+def get_mentor_stats():
+    """Get mentor statistics"""
+    stats = admin_service.get_mentor_stats()
+    return jsonify(stats), 200
+
+
+# --- Learner Support Endpoints ---
+
+@bp.route('/support/tickets', methods=['GET'])
+def get_support_tickets():
+    """
+    Get support tickets
+    ---
+    tags:
+      - Admin - Learner Support
+    parameters:
+      - name: status
+        in: query
+        type: string
+        enum: [all, open, in_progress, resolved, closed]
+      - name: priority
+        in: query
+        type: string
+        enum: [all, low, medium, high, urgent]
+    responses:
+      200:
+        description: List of support tickets
+    """
+    from flask import request
+    status = request.args.get('status', 'all')
+    priority = request.args.get('priority', 'all')
+    tickets = admin_service.get_support_tickets(status, priority)
+    return jsonify(tickets), 200
+
+
+@bp.route('/support/tickets/<int:ticket_id>', methods=['GET'])
+def get_ticket_details(ticket_id):
+    """Get support ticket details"""
+    ticket = admin_service.get_ticket_by_id(ticket_id)
+    if ticket:
+        return jsonify(ticket), 200
+    return jsonify({'error': 'Ticket not found'}), 404
+
+
+@bp.route('/support/tickets/<int:ticket_id>/status', methods=['PUT'])
+def update_ticket_status(ticket_id):
+    """Update ticket status"""
+    from flask import request
+    data = request.get_json()
+    new_status = data.get('status')
+    result = admin_service.update_ticket_status(ticket_id, new_status)
+    return jsonify({'message': f'Ticket status updated to {new_status}'}), 200
+
+
+@bp.route('/support/tickets/<int:ticket_id>/reply', methods=['POST'])
+def reply_to_ticket(ticket_id):
+    """Reply to a support ticket"""
+    from flask import request
+    data = request.get_json()
+    message = data.get('message')
+    admin_id = data.get('admin_id')
+    result = admin_service.reply_to_ticket(ticket_id, admin_id, message)
+    return jsonify({'message': 'Reply sent', 'reply_id': result}), 201
+
+
+@bp.route('/support/stats', methods=['GET'])
+def get_support_stats():
+    """Get support statistics"""
+    stats = admin_service.get_support_stats()
+    return jsonify(stats), 200
+

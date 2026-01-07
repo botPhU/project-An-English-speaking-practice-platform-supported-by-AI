@@ -2,21 +2,34 @@ import api from './api';
 
 export const mentorService = {
     // Dashboard
-    getDashboard: () => api.get('/mentor/dashboard'),
+    getDashboard: (mentorId: number) => api.get(`/mentor/dashboard/${mentorId}`),
+
+    // Profile
+    getProfile: (mentorId: number) => api.get(`/mentor/profile/${mentorId}`),
+    updateProfile: (mentorId: number, data: any) => api.put(`/mentor/profile/${mentorId}`, data),
 
     // Learner Management
-    getLearners: () => api.get('/mentor/learners'),
-    assessLearner: (learnerId: string, data: any) => api.post(`/mentor/learners/${learnerId}/assess`, data),
+    getLearners: (mentorId: number) => api.get(`/mentor/learners/${mentorId}`),
+    getLearnerSessions: (mentorId: number, learnerId: number) =>
+        api.get(`/mentor/learners/${mentorId}/${learnerId}/sessions`),
+    assessLearner: (data: { mentor_id: number; learner_id: number; assessment: any }) =>
+        api.post('/mentor/assess', data),
 
     // Resources
-    getResources: () => api.get('/mentor/resources'),
+    getResources: (mentorId: number) => api.get(`/mentor/resources/${mentorId}`),
     createResource: (data: any) => api.post('/mentor/resources', data),
 
     // Feedback
-    giveFeedback: (learnerId: string, sessionId: string, data: any) =>
-        api.post(`/mentor/feedback/${learnerId}/${sessionId}`, data),
+    provideSessionFeedback: (sessionId: number, data: { mentor_id: number; feedback: any }) =>
+        api.post(`/mentor/feedback/session/${sessionId}`, data),
+    createLearnerFeedback: (data: { mentor_id: number; learner_id: number; feedback: any }) =>
+        api.post('/mentor/feedback/learner', data),
 
     // Topics
     getConversationTopics: () => api.get('/mentor/topics'),
     createTopic: (data: any) => api.post('/mentor/topics', data),
+
+    // Schedule/Sessions
+    getUpcomingSessions: (mentorId: number) => api.get(`/mentor/sessions/${mentorId}/upcoming`),
+    getRecentFeedback: (mentorId: number) => api.get(`/mentor/feedback/${mentorId}/recent`),
 };

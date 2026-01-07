@@ -1,78 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LearnerLayout from '../../layouts/LearnerLayout';
+import { useAuth } from '../../context/AuthContext';
+import { learnerService } from '../../services/learnerService';
 
 export default function Challenges() {
+    const { user: authUser } = useAuth();
     const [filter, setFilter] = useState<'all' | 'daily' | 'weekly' | 'special'>('all');
+    const [topics, setTopics] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-    const challenges = [
-        {
-            id: 1,
-            title: 'Mô tả phong cảnh',
-            description: 'Sử dụng ít nhất 5 tính từ liên quan đến thiên nhiên trong bài nói 1 phút.',
-            type: 'daily',
-            xp: 50,
-            time: '1 phút',
-            difficulty: 'Dễ',
-            image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=400',
-            completed: false,
-        },
-        {
-            id: 2,
-            title: 'Phỏng vấn xin việc',
-            description: 'Trả lời 3 câu hỏi phỏng vấn phổ biến bằng tiếng Anh tự nhiên.',
-            type: 'daily',
-            xp: 75,
-            time: '3 phút',
-            difficulty: 'Trung bình',
-            image: 'https://images.unsplash.com/photo-1565688534245-05d6b5be184a?auto=format&fit=crop&q=80&w=400',
-            completed: true,
-        },
-        {
-            id: 3,
-            title: 'Thuyết trình sản phẩm',
-            description: 'Giới thiệu một sản phẩm yêu thích của bạn trong 2 phút.',
-            type: 'weekly',
-            xp: 150,
-            time: '2 phút',
-            difficulty: 'Trung bình',
-            image: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=400',
-            completed: false,
-        },
-        {
-            id: 4,
-            title: 'Tranh luận chủ đề xã hội',
-            description: 'Đưa ra quan điểm về một vấn đề xã hội với 3 luận điểm rõ ràng.',
-            type: 'weekly',
-            xp: 200,
-            time: '5 phút',
-            difficulty: 'Khó',
-            image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&q=80&w=400',
-            completed: false,
-        },
-        {
-            id: 5,
-            title: 'Chúc mừng năm mới',
-            description: 'Gửi lời chúc năm mới bằng tiếng Anh với phát âm chuẩn.',
-            type: 'special',
-            xp: 100,
-            time: '1 phút',
-            difficulty: 'Dễ',
-            image: 'https://images.unsplash.com/photo-1467810563316-b5476525c0f9?auto=format&fit=crop&q=80&w=400',
-            completed: false,
-            deadline: '01/01/2025',
-        },
-    ];
+    useEffect(() => {
+        if (authUser?.id) {
+            fetchData();
+        }
+    }, [authUser?.id]);
 
-    const filteredChallenges = filter === 'all'
-        ? challenges
-        : challenges.filter(c => c.type === filter);
-
-    const stats = {
-        completed: challenges.filter(c => c.completed).length,
-        total: challenges.length,
-        totalXP: 1250,
-        streak: 5,
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [topicsRes, progressRes] = await Promise.all([
+                learnerService.getTopics(filter),
+                learnerService.getProgress(Number(authUser?.id))
+            ]);
+            setTopics(topicsRes.data);
+            setStats(progressRes.data);
+        } catch (error) {
+            console.error('Error fetching challenges data:', error);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    // Refetch when filter changes
+    useEffect(() => {
+        if (authUser?.id) {
+            learnerService.getTopics(filter).then(res => setTopics(res.data));
+        }
+    }, [filter, authUser?.id]);
+
+    if (loading) {
+        return (
+            <LearnerLayout title="Thử thách">
+                <div className="flex items-center justify-center h-[400px]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+            </LearnerLayout>
+        );
+    }
 
     return (
         <LearnerLayout title="Thử thách">
@@ -90,30 +65,30 @@ export default function Challenges() {
                     <div className="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-primary/30 transition-colors">
                         <div className="flex items-center gap-3 mb-2">
                             <span className="material-symbols-outlined text-green-500">check_circle</span>
-                            <span className="text-text-secondary text-sm">Đã hoàn thành</span>
+                            <span className="text-text-secondary text-sm">Bài luyện tập</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">{stats.completed}/{stats.total}</p>
+                        <p className="text-2xl font-bold text-white">{stats?.total_sessions || 0}</p>
                     </div>
                     <div className="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-primary/30 transition-colors">
                         <div className="flex items-center gap-3 mb-2">
                             <span className="material-symbols-outlined text-primary">military_tech</span>
-                            <span className="text-text-secondary text-sm">Tổng XP</span>
+                            <span className="text-text-secondary text-sm">Điểm XP</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">{stats.totalXP}</p>
+                        <p className="text-2xl font-bold text-white">{stats?.xp_points?.toLocaleString() || 0}</p>
                     </div>
                     <div className="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-primary/30 transition-colors">
                         <div className="flex items-center gap-3 mb-2">
                             <span className="material-symbols-outlined text-orange-500">local_fire_department</span>
                             <span className="text-text-secondary text-sm">Chuỗi ngày</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">{stats.streak} ngày</p>
+                        <p className="text-2xl font-bold text-white">{stats?.current_streak || 0} ngày</p>
                     </div>
                     <div className="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-primary/30 transition-colors">
                         <div className="flex items-center gap-3 mb-2">
                             <span className="material-symbols-outlined text-purple-500">emoji_events</span>
-                            <span className="text-text-secondary text-sm">Xếp hạng</span>
+                            <span className="text-text-secondary text-sm">Trình độ</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">#12</p>
+                        <p className="text-2xl font-bold text-white">{stats?.current_level?.toUpperCase() || 'BEGINNER'}</p>
                     </div>
                 </div>
 
@@ -127,10 +102,10 @@ export default function Challenges() {
                     ].map((tab) => (
                         <button
                             key={tab.key}
-                            onClick={() => setFilter(tab.key as typeof filter)}
+                            onClick={() => setFilter(tab.key as any)}
                             className={`px-4 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${filter === tab.key
-                                    ? 'bg-primary text-white'
-                                    : 'bg-surface-dark text-text-secondary hover:text-white hover:bg-white/5 border border-border-dark'
+                                ? 'bg-primary text-white'
+                                : 'bg-surface-dark text-text-secondary hover:text-white hover:bg-white/5 border border-border-dark'
                                 }`}
                         >
                             <span className="material-symbols-outlined text-lg">{tab.icon}</span>
@@ -141,85 +116,56 @@ export default function Challenges() {
 
                 {/* Challenges Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredChallenges.map((challenge) => (
+                    {topics.length > 0 ? topics.map((topic) => (
                         <div
-                            key={challenge.id}
-                            className={`bg-surface-dark border rounded-xl overflow-hidden transition-all hover:shadow-lg group ${challenge.completed
-                                    ? 'border-green-500/30 opacity-75'
-                                    : 'border-border-dark hover:border-primary/50'
-                                }`}
+                            key={topic.id}
+                            className="bg-surface-dark border border-border-dark rounded-xl overflow-hidden transition-all hover:shadow-lg group hover:border-primary/50"
                         >
                             <div className="relative h-40 overflow-hidden">
                                 <img
-                                    src={challenge.image}
-                                    alt={challenge.title}
+                                    src={topic.image_url || `https://images.unsplash.com/photo-1543269664-7eef42226a21?auto=format&fit=crop&q=80&w=400`}
+                                    alt={topic.title}
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-surface-dark via-transparent to-transparent"></div>
                                 <div className="absolute top-3 left-3 flex gap-2">
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${challenge.type === 'daily' ? 'bg-blue-500 text-white' :
-                                            challenge.type === 'weekly' ? 'bg-purple-500 text-white' :
-                                                'bg-orange-500 text-white'
-                                        }`}>
-                                        {challenge.type === 'daily' ? 'Hàng ngày' :
-                                            challenge.type === 'weekly' ? 'Hàng tuần' : 'Đặc biệt'}
+                                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-blue-500 text-white">
+                                        {topic.category || 'Giao tiếp'}
                                     </span>
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${challenge.difficulty === 'Dễ' ? 'bg-green-500/20 text-green-500' :
-                                            challenge.difficulty === 'Trung bình' ? 'bg-yellow-500/20 text-yellow-500' :
-                                                'bg-red-500/20 text-red-500'
-                                        }`}>
-                                        {challenge.difficulty}
+                                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-green-500/20 text-green-500">
+                                        Level: {topic.difficulty_level || 1}
                                     </span>
                                 </div>
-                                {challenge.completed && (
-                                    <div className="absolute top-3 right-3">
-                                        <span className="material-symbols-outlined text-green-500 text-2xl bg-surface-dark rounded-full p-1">check_circle</span>
-                                    </div>
-                                )}
                             </div>
                             <div className="p-5">
-                                <h3 className="font-bold text-white text-lg mb-2">{challenge.title}</h3>
-                                <p className="text-sm text-text-secondary mb-4 line-clamp-2">{challenge.description}</p>
+                                <h3 className="font-bold text-white text-lg mb-2">{topic.title}</h3>
+                                <p className="text-sm text-text-secondary mb-4 line-clamp-2">{topic.description}</p>
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-4 text-xs text-text-secondary">
                                         <span className="flex items-center gap-1">
                                             <span className="material-symbols-outlined text-sm">schedule</span>
-                                            {challenge.time}
+                                            {topic.time_limit || 5} phút
                                         </span>
                                         <span className="flex items-center gap-1 text-primary font-bold">
                                             <span className="material-symbols-outlined text-sm">stars</span>
-                                            +{challenge.xp} XP
+                                            +{topic.xp_reward || 50} XP
                                         </span>
                                     </div>
-                                    {challenge.deadline && (
-                                        <span className="text-xs text-orange-500 flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-sm">timer</span>
-                                            {challenge.deadline}
-                                        </span>
-                                    )}
                                 </div>
                                 <button
-                                    className={`w-full py-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${challenge.completed
-                                            ? 'bg-green-500/20 text-green-500 cursor-default'
-                                            : 'bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/25'
-                                        }`}
-                                    disabled={challenge.completed}
+                                    className="w-full py-3 rounded-lg font-bold text-sm bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2"
                                 >
-                                    {challenge.completed ? (
-                                        <>
-                                            <span className="material-symbols-outlined text-lg">check</span>
-                                            Đã hoàn thành
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className="material-symbols-outlined text-lg">play_arrow</span>
-                                            Bắt đầu thử thách
-                                        </>
-                                    )}
+                                    <span className="material-symbols-outlined text-lg">play_arrow</span>
+                                    Bắt đầu luyện tập
                                 </button>
                             </div>
                         </div>
-                    ))}
+                    )) : (
+                        <div className="col-span-full py-20 text-center bg-surface-dark rounded-xl border border-dashed border-border-dark">
+                            <span className="material-symbols-outlined text-4xl text-text-secondary opacity-20 mb-2">search_off</span>
+                            <p className="text-text-secondary">Không tìm thấy thử thách nào cho mục này.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </LearnerLayout>

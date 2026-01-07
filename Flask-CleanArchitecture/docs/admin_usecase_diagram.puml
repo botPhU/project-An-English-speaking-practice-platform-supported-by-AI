@@ -1,0 +1,224 @@
+@startuml Admin Use Case Diagram
+'==============================================================================
+'                      AESP Platform - Admin Use Case Diagram
+'                    (An English Speaking Practice Platform)
+'==============================================================================
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+    BackgroundColor<<main>> LightBlue
+    BorderColor<<main>> DarkBlue
+    BackgroundColor<<sub>> LightYellow
+    BorderColor<<sub>> Orange
+}
+
+'------------------------------------------------------------------------------
+' Actors
+'------------------------------------------------------------------------------
+actor "Admin" as admin #LightCoral
+actor "System" as system #LightGray
+
+'------------------------------------------------------------------------------
+' Package: Dashboard Management
+'------------------------------------------------------------------------------
+rectangle "Dashboard Management" {
+    usecase "Xem thống kê Dashboard" as UC_ViewDashboard <<main>>
+    usecase "Xem thống kê người dùng" as UC_ViewUserStats <<sub>>
+    usecase "Xem thống kê doanh thu" as UC_ViewRevenueStats <<sub>>
+    usecase "Xem biểu đồ doanh thu" as UC_ViewRevenueChart <<sub>>
+    usecase "Xem biểu đồ tăng trưởng" as UC_ViewGrowthChart <<sub>>
+    usecase "Xem hoạt động gần đây" as UC_ViewRecentActivities <<sub>>
+}
+
+'------------------------------------------------------------------------------
+' Package: User Management
+'------------------------------------------------------------------------------
+rectangle "User Management" {
+    usecase "Quản lý người dùng" as UC_ManageUsers <<main>>
+    usecase "Xem danh sách người dùng" as UC_ListUsers <<sub>>
+    usecase "Tìm kiếm người dùng" as UC_SearchUsers <<sub>>
+    usecase "Lọc theo role/status" as UC_FilterUsers <<sub>>
+    usecase "Xem chi tiết người dùng" as UC_ViewUserDetail <<sub>>
+    usecase "Cập nhật thông tin người dùng" as UC_UpdateUser <<sub>>
+    usecase "Xóa người dùng" as UC_DeleteUser <<sub>>
+    usecase "Xem thống kê người dùng" as UC_GetUserStats <<sub>>
+}
+
+'------------------------------------------------------------------------------
+' Package: Mentor Management
+'------------------------------------------------------------------------------
+rectangle "Mentor Management" {
+    usecase "Quản lý Mentor" as UC_ManageMentors <<main>>
+    usecase "Xem danh sách Mentor" as UC_ListMentors <<sub>>
+    usecase "Duyệt đăng ký Mentor" as UC_ApproveMentor <<sub>>
+    usecase "Xem hiệu suất Mentor" as UC_ViewMentorPerformance <<sub>>
+    usecase "Phân công Learner cho Mentor" as UC_AssignLearner <<sub>>
+}
+
+'------------------------------------------------------------------------------
+' Package: Package Management
+'------------------------------------------------------------------------------
+rectangle "Package Management" {
+    usecase "Quản lý gói học" as UC_ManagePackages <<main>>
+    usecase "Xem danh sách gói học" as UC_ListPackages <<sub>>
+    usecase "Tạo gói học mới" as UC_CreatePackage <<sub>>
+    usecase "Cập nhật gói học" as UC_UpdatePackage <<sub>>
+    usecase "Xóa gói học" as UC_DeletePackage <<sub>>
+    usecase "Xem thống kê mua hàng" as UC_ViewPurchaseStats <<sub>>
+}
+
+'------------------------------------------------------------------------------
+' Package: Policy Management
+'------------------------------------------------------------------------------
+rectangle "Policy Management" {
+    usecase "Quản lý chính sách" as UC_ManagePolicies <<main>>
+    usecase "Xem danh sách chính sách" as UC_ListPolicies <<sub>>
+    usecase "Tạo chính sách mới" as UC_CreatePolicy <<sub>>
+    usecase "Cập nhật chính sách" as UC_UpdatePolicy <<sub>>
+    usecase "Xóa chính sách" as UC_DeletePolicy <<sub>>
+    usecase "Xem loại chính sách" as UC_ViewPolicyTypes <<sub>>
+}
+
+'------------------------------------------------------------------------------
+' Package: Report & Analytics
+'------------------------------------------------------------------------------
+rectangle "Report & Analytics" {
+    usecase "Xem báo cáo" as UC_ViewReports <<main>>
+    usecase "Xem báo cáo doanh thu" as UC_ViewRevenueReport <<sub>>
+    usecase "Xem báo cáo tăng trưởng" as UC_ViewGrowthReport <<sub>>
+    usecase "Xuất báo cáo" as UC_ExportReport <<sub>>
+    usecase "Lọc theo thời gian" as UC_FilterByDate <<sub>>
+}
+
+'------------------------------------------------------------------------------
+' Package: Notification Management
+'------------------------------------------------------------------------------
+rectangle "Notification Management" {
+    usecase "Quản lý thông báo" as UC_ManageNotifications <<main>>
+    usecase "Tạo thông báo" as UC_CreateNotification <<sub>>
+    usecase "Gửi thông báo hàng loạt" as UC_BulkNotification <<sub>>
+    usecase "Xóa thông báo" as UC_DeleteNotification <<sub>>
+}
+
+'------------------------------------------------------------------------------
+' Package: Settings Management
+'------------------------------------------------------------------------------
+rectangle "Settings Management" {
+    usecase "Quản lý cài đặt hệ thống" as UC_ManageSettings <<main>>
+    usecase "Cập nhật cài đặt chung" as UC_UpdateGeneralSettings <<sub>>
+    usecase "Cập nhật cài đặt bảo mật" as UC_UpdateSecuritySettings <<sub>>
+    usecase "Cập nhật cài đặt hiệu năng" as UC_UpdatePerformanceSettings <<sub>>
+}
+
+'------------------------------------------------------------------------------
+' Package: Profile Management
+'------------------------------------------------------------------------------
+rectangle "Profile Management" {
+    usecase "Quản lý hồ sơ Admin" as UC_ManageProfile <<main>>
+    usecase "Xem hồ sơ cá nhân" as UC_ViewProfile <<sub>>
+    usecase "Cập nhật hồ sơ" as UC_UpdateProfile <<sub>>
+    usecase "Đổi mật khẩu" as UC_ChangePassword <<sub>>
+}
+
+'------------------------------------------------------------------------------
+' Admin Connections
+'------------------------------------------------------------------------------
+' Dashboard
+admin --> UC_ViewDashboard
+UC_ViewDashboard ..> UC_ViewUserStats : <<include>>
+UC_ViewDashboard ..> UC_ViewRevenueStats : <<include>>
+UC_ViewDashboard ..> UC_ViewRevenueChart : <<include>>
+UC_ViewDashboard ..> UC_ViewGrowthChart : <<include>>
+UC_ViewDashboard ..> UC_ViewRecentActivities : <<include>>
+
+' User Management
+admin --> UC_ManageUsers
+UC_ManageUsers ..> UC_ListUsers : <<include>>
+UC_ListUsers ..> UC_SearchUsers : <<extend>>
+UC_ListUsers ..> UC_FilterUsers : <<extend>>
+UC_ManageUsers ..> UC_ViewUserDetail : <<include>>
+UC_ManageUsers ..> UC_UpdateUser : <<include>>
+UC_ManageUsers ..> UC_DeleteUser : <<include>>
+UC_ManageUsers ..> UC_GetUserStats : <<include>>
+
+' Mentor Management
+admin --> UC_ManageMentors
+UC_ManageMentors ..> UC_ListMentors : <<include>>
+UC_ManageMentors ..> UC_ApproveMentor : <<include>>
+UC_ManageMentors ..> UC_ViewMentorPerformance : <<include>>
+UC_ManageMentors ..> UC_AssignLearner : <<include>>
+
+' Package Management
+admin --> UC_ManagePackages
+UC_ManagePackages ..> UC_ListPackages : <<include>>
+UC_ManagePackages ..> UC_CreatePackage : <<include>>
+UC_ManagePackages ..> UC_UpdatePackage : <<include>>
+UC_ManagePackages ..> UC_DeletePackage : <<include>>
+UC_ManagePackages ..> UC_ViewPurchaseStats : <<include>>
+
+' Policy Management
+admin --> UC_ManagePolicies
+UC_ManagePolicies ..> UC_ListPolicies : <<include>>
+UC_ManagePolicies ..> UC_CreatePolicy : <<include>>
+UC_ManagePolicies ..> UC_UpdatePolicy : <<include>>
+UC_ManagePolicies ..> UC_DeletePolicy : <<include>>
+UC_ManagePolicies ..> UC_ViewPolicyTypes : <<include>>
+
+' Report & Analytics
+admin --> UC_ViewReports
+UC_ViewReports ..> UC_ViewRevenueReport : <<include>>
+UC_ViewReports ..> UC_ViewGrowthReport : <<include>>
+UC_ViewReports ..> UC_ExportReport : <<extend>>
+UC_ViewRevenueReport ..> UC_FilterByDate : <<extend>>
+UC_ViewGrowthReport ..> UC_FilterByDate : <<extend>>
+
+' Notification Management
+admin --> UC_ManageNotifications
+UC_ManageNotifications ..> UC_CreateNotification : <<include>>
+UC_ManageNotifications ..> UC_BulkNotification : <<include>>
+UC_ManageNotifications ..> UC_DeleteNotification : <<include>>
+
+' Settings Management
+admin --> UC_ManageSettings
+UC_ManageSettings ..> UC_UpdateGeneralSettings : <<include>>
+UC_ManageSettings ..> UC_UpdateSecuritySettings : <<include>>
+UC_ManageSettings ..> UC_UpdatePerformanceSettings : <<include>>
+
+' Profile Management
+admin --> UC_ManageProfile
+UC_ManageProfile ..> UC_ViewProfile : <<include>>
+UC_ManageProfile ..> UC_UpdateProfile : <<include>>
+UC_ManageProfile ..> UC_ChangePassword : <<include>>
+
+'------------------------------------------------------------------------------
+' System Actor Connections (Automated processes)
+'------------------------------------------------------------------------------
+system --> UC_ViewRecentActivities : logs activities
+system --> UC_ViewGrowthChart : calculates data
+
+'------------------------------------------------------------------------------
+' Notes
+'------------------------------------------------------------------------------
+note right of admin
+  **Admin Role:**
+  - Full system access
+  - Manage all users
+  - Configure platform
+  - View all reports
+end note
+
+note bottom of UC_ManageUsers
+  **CRUD Operations:**
+  Create, Read, Update, Delete
+end note
+
+note bottom of UC_ManagePolicies
+  **Policy Types:**
+  - Terms of Service
+  - Privacy Policy
+  - Refund Policy
+  - Usage Policy
+end note
+
+@enduml

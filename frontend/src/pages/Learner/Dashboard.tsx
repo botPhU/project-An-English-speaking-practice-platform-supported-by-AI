@@ -1,16 +1,58 @@
+import { useState, useEffect } from 'react';
 import LearnerLayout from '../../layouts/LearnerLayout';
+import { useAuth } from '../../context/AuthContext';
+import { learnerService } from '../../services/learnerService';
 
 export default function Dashboard() {
+    const { user: authUser } = useAuth();
+    const [stats, setStats] = useState<any>(null);
+    const [dailyChallenge, setDailyChallenge] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (authUser?.id) {
+            fetchDashboardData();
+        }
+    }, [authUser?.id]);
+
+    const fetchDashboardData = async () => {
+        try {
+            setLoading(true);
+            const [statsRes, challengeRes] = await Promise.all([
+                learnerService.getDashboard(Number(authUser?.id)),
+                learnerService.getDailyChallenge()
+            ]);
+            setStats(statsRes.data);
+            setDailyChallenge(challengeRes.data);
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <LearnerLayout title="Bảng điều khiển">
+                <div className="flex items-center justify-center h-[400px]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+            </LearnerLayout>
+        );
+    }
+
     return (
         <LearnerLayout title="Bảng điều khiển">
             <div className="flex flex-col gap-10">
                 {/* Welcome Section */}
                 <header className="flex flex-col gap-4">
                     <h2 className="text-3xl md:text-4xl font-black leading-tight text-white">
-                        Chào mừng trở lại, Alex
+                        Chào mừng trở lại, {authUser?.name || 'Học viên'}
                     </h2>
                     <p className="text-text-secondary text-base md:text-lg max-w-2xl font-medium">
-                        Bạn đang có chuỗi 12 ngày học liên tiếp! Hãy giữ vững phong độ nhé.
+                        {stats?.current_streak > 0
+                            ? `Bạn đang có chuỗi ${stats.current_streak} ngày học liên tiếp! Hãy giữ vững phong độ nhé.`
+                            : 'Bắt đầu hành trình học tập hôm nay để xây dựng chuỗi ngày học của bạn!'}
                     </p>
                 </header>
 
@@ -27,7 +69,7 @@ export default function Dashboard() {
                             <span className="text-text-secondary font-bold text-sm uppercase tracking-widest">Chuỗi Ngày</span>
                         </div>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black">12</span>
+                            <span className="text-4xl font-black">{stats?.current_streak || 0}</span>
                             <span className="text-text-secondary font-bold text-sm">Ngày liên tiếp</span>
                         </div>
                     </div>
@@ -43,7 +85,7 @@ export default function Dashboard() {
                             <span className="text-text-secondary font-bold text-sm uppercase tracking-widest">Điểm XP</span>
                         </div>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black">2,450</span>
+                            <span className="text-4xl font-black">{stats?.xp_points?.toLocaleString() || 0}</span>
                             <span className="text-text-secondary font-bold text-sm">Điểm XP</span>
                         </div>
                     </div>
@@ -56,11 +98,11 @@ export default function Dashboard() {
                             <div className="size-12 rounded-xl bg-accent-green/10 flex items-center justify-center text-accent-green">
                                 <span className="material-symbols-outlined">track_changes</span>
                             </div>
-                            <span className="text-text-secondary font-bold text-sm uppercase tracking-widest">Mục Tiêu Ngày</span>
+                            <span className="text-text-secondary font-bold text-sm uppercase tracking-widest">Mục Tiêu Tuần</span>
                         </div>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black">80%</span>
-                            <span className="text-text-secondary font-bold text-sm">Hoàn thành</span>
+                            <span className="text-4xl font-black">{stats?.weekly_goal?.completed || 0}/{stats?.weekly_goal?.target || 5}</span>
+                            <span className="text-text-secondary font-bold text-sm">Buổi học</span>
                         </div>
                     </div>
                 </div>
@@ -79,17 +121,16 @@ export default function Dashboard() {
                                 <div className="absolute inset-0 bg-gradient-to-t from-surface-dark via-surface-dark/50 to-transparent"></div>
                                 <div className="absolute bottom-0 left-0 p-8">
                                     <span className="px-3 py-1 rounded-full bg-primary text-[10px] font-black uppercase tracking-widest mb-4 inline-block">Tiếp tục lộ trình</span>
-                                    <h3 className="text-3xl font-black text-white mb-2">Thảo luận Kế hoạch Du lịch</h3>
+                                    <h3 className="text-3xl font-black text-white mb-2">Bắt đầu bài học đầu tiên</h3>
                                     <p className="text-text-secondary font-medium flex items-center gap-2">
                                         <span className="material-symbols-outlined text-lg">school</span>
-                                        Bài 4 • Giao tiếp
+                                        Phát triển kỹ năng giao tiếp tự nhiên
                                     </p>
                                 </div>
                             </div>
                             <div className="p-8">
                                 <p className="text-text-secondary text-base leading-relaxed mb-8 max-w-2xl">
-                                    Làm chủ thì tương lai cùng trợ lý AI trong phiên nhập vai tương tác này.
-                                    Tập trung vào cách dùng <span className="text-white font-bold">"going to"</span> và <span className="text-white font-bold">"will"</span>.
+                                    Luyện tập cùng trợ lý AI để cải thiện phát âm và phản xạ nói của bạn.
                                 </p>
                                 <button className="w-full md:w-auto px-10 py-4 rounded-xl bg-primary hover:bg-primary-dark text-white font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20 transition-all">
                                     Bắt đầu ngay
@@ -106,9 +147,10 @@ export default function Dashboard() {
                                 </h4>
                                 <div className="space-y-4">
                                     {[
-                                        { label: 'Phát âm', value: 72, color: 'bg-primary' },
-                                        { label: 'Ngữ pháp', value: 64, color: 'bg-purple-500' },
-                                        { label: 'Từ vựng', value: 85, color: 'bg-accent-green' },
+                                        { label: 'Phát âm', value: stats?.skills?.pronunciation || 0, color: 'bg-primary' },
+                                        { label: 'Ngữ pháp', value: stats?.skills?.grammar || 0, color: 'bg-purple-500' },
+                                        { label: 'Từ vựng', value: stats?.skills?.vocabulary || 0, color: 'bg-accent-green' },
+                                        { label: 'Trôi chảy', value: stats?.skills?.fluency || 0, color: 'bg-orange-500' },
                                     ].map(skill => (
                                         <div key={skill.label} className="space-y-2">
                                             <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-text-secondary">
@@ -130,7 +172,9 @@ export default function Dashboard() {
                                     AI Feedback Mới
                                 </h4>
                                 <div className="p-4 rounded-xl bg-white/5 border border-white/5 italic text-sm text-text-secondary leading-relaxed">
-                                    "Bạn đã sử dụng thì hiện tại hoàn thành rất tự nhiên. Hãy chú ý nhấn âm cuối 's' ở các từ số nhiều nhé!"
+                                    {stats?.recent_sessions > 0
+                                        ? "Hoàn thành nhiều buổi học hơn để nhận được phản hồi chi tiết từ AI."
+                                        : "Bạn chưa có buổi học nào. Hãy bắt đầu ngay để nhận phản hồi từ AI nhé!"}
                                 </div>
                                 <button className="text-primary text-xs font-black uppercase tracking-widest hover:underline text-left">
                                     Xem chi tiết phản hồi
@@ -149,25 +193,9 @@ export default function Dashboard() {
                                     Xem tất cả
                                 </button>
                             </div>
-                            <div className="space-y-3">
-                                {[
-                                    { day: 'Hôm nay', time: '19:00', title: 'Giao tiếp: Du lịch', type: 'AI Practice', status: 'upcoming', color: 'border-primary' },
-                                    { day: 'T3, 31/12', time: '20:00', title: 'Phát âm: Âm cuối', type: 'Lesson', status: 'scheduled', color: 'border-purple-500' },
-                                    { day: 'T5, 02/01', time: '18:30', title: 'Ngữ pháp: Thì tương lai', type: 'Quiz', status: 'scheduled', color: 'border-green-500' },
-                                ].map((item, index) => (
-                                    <div key={index} className={`flex items-center gap-4 p-4 rounded-xl bg-white/5 border-l-4 ${item.color} hover:bg-white/10 transition-colors cursor-pointer`}>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-xs font-bold text-text-secondary">{item.day}</span>
-                                                <span className="text-xs text-text-secondary">•</span>
-                                                <span className="text-xs font-bold text-primary">{item.time}</span>
-                                            </div>
-                                            <h5 className="font-bold text-white truncate">{item.title}</h5>
-                                            <span className="text-[10px] uppercase tracking-wider text-text-secondary">{item.type}</span>
-                                        </div>
-                                        <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
-                                    </div>
-                                ))}
+                            <div className="space-y-3 py-10 text-center text-text-secondary text-sm">
+                                <span className="material-symbols-outlined text-4xl mb-2 opacity-20">event_busy</span>
+                                <p>Bạn chưa có lịch học nào được lên kế hoạch.</p>
                             </div>
                         </section>
                     </div>
@@ -192,14 +220,14 @@ export default function Dashboard() {
                                     <div className="absolute inset-0 bg-gradient-to-t from-surface-dark via-transparent to-transparent"></div>
                                 </div>
                                 <div className="p-6">
-                                    <h5 className="font-bold text-lg mb-2">Mô tả phong cảnh</h5>
+                                    <h5 className="font-bold text-lg mb-2">{dailyChallenge?.title || 'Đang tải...'}</h5>
                                     <p className="text-xs text-text-secondary leading-relaxed mb-6">
-                                        Sử dụng ít nhất 5 tính từ liên quan đến thiên nhiên trong bài nói 1 phút.
+                                        {dailyChallenge?.description || 'Tham gia thử thách hằng ngày để nhận thêm XP!'}
                                     </p>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-primary text-sm">stars</span>
-                                            <span className="text-xs font-black text-primary">+50 XP</span>
+                                            <span className="text-xs font-black text-primary">+{dailyChallenge?.xp_reward || 0} XP</span>
                                         </div>
                                         <button className="px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest transition-all">
                                             THỬ THÁCH
@@ -215,22 +243,9 @@ export default function Dashboard() {
                                 Bảng Xếp Hạng
                             </h4>
                             <div className="space-y-6">
-                                {[
-                                    { rank: 1, name: 'Minh Hoàng', xp: '3,200', avatar: 'MH', color: 'text-yellow-500' },
-                                    { rank: 2, name: 'Quỳnh Anh', xp: '2,950', avatar: 'QA', color: 'text-gray-400' },
-                                    { rank: 3, name: 'Bạn', xp: '2,450', avatar: 'ME', color: 'text-primary', active: true },
-                                ].map(user => (
-                                    <div key={user.name} className={`flex items-center justify-between ${user.active ? 'p-3 bg-primary/5 rounded-xl border border-primary/20 -mx-3' : ''}`}>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`text-xs font-black w-4 ${user.color}`}>{user.rank}</span>
-                                            <div className={`size-10 rounded-full flex items-center justify-center font-black text-sm border-2 ${user.active ? 'border-primary bg-primary text-white' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>
-                                                {user.avatar}
-                                            </div>
-                                            <span className={`text-sm font-bold ${user.active ? 'text-primary' : ''}`}>{user.name}</span>
-                                        </div>
-                                        <span className="text-[10px] font-black text-text-secondary">{user.xp} XP</span>
-                                    </div>
-                                ))}
+                                <div className="text-center py-6 text-text-secondary text-sm">
+                                    <p>Bảng xếp hạng sẽ sớm xuất hiện khi có thêm nhiều người học tham gia!</p>
+                                </div>
                             </div>
                         </section>
                     </div>

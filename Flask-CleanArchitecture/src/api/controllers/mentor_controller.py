@@ -1,0 +1,129 @@
+from flask import Blueprint, request, jsonify
+from flasgger import swag_from
+from services.mentor_service import MentorService
+
+mentor_bp = Blueprint('mentor', __name__, url_prefix='/api/mentor')
+mentor_service = MentorService()
+
+# ==================== DASHBOARD ====================
+@mentor_bp.route('/dashboard/<int:mentor_id>', methods=['GET'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Get mentor dashboard statistics',
+    'parameters': [{'name': 'mentor_id', 'in': 'path', 'type': 'integer', 'required': True}],
+    'responses': {'200': {'description': 'Dashboard data'}}
+})
+def get_dashboard(mentor_id):
+    """Get mentor dashboard data"""
+    stats = mentor_service.get_dashboard_stats(mentor_id)
+    return jsonify(stats), 200
+
+# ==================== LEARNERS ====================
+@mentor_bp.route('/learners/<int:mentor_id>', methods=['GET'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Get assigned learners',
+    'parameters': [{'name': 'mentor_id', 'in': 'path', 'type': 'integer', 'required': True}],
+    'responses': {'200': {'description': 'List of learners'}}
+})
+def get_learners(mentor_id):
+    """Get learners assigned to this mentor"""
+    learners = mentor_service.get_assigned_learners(mentor_id)
+    return jsonify([{
+        'id': l.id,
+        'user_name': l.user_name,
+        'full_name': l.full_name,
+        'email': l.email
+    } for l in learners]), 200
+
+@mentor_bp.route('/learners/<int:mentor_id>/<int:learner_id>/sessions', methods=['GET'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Get sessions with a learner',
+    'responses': {'200': {'description': 'List of sessions'}}
+})
+def get_learner_sessions(mentor_id, learner_id):
+    """Get sessions with a specific learner"""
+    sessions = mentor_service.get_learner_sessions(mentor_id, learner_id)
+    return jsonify([{
+        'id': s.id,
+        'session_type': s.session_type,
+        'topic': s.topic,
+        'overall_score': s.overall_score,
+        'is_completed': s.is_completed,
+        'created_at': str(s.created_at) if s.created_at else None
+    } for s in sessions]), 200
+
+# ==================== FEEDBACK ====================
+@mentor_bp.route('/feedback/session/<int:session_id>', methods=['POST'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Provide feedback for a session',
+    'responses': {'200': {'description': 'Feedback saved'}}
+})
+def provide_session_feedback(session_id):
+    """Provide feedback for a practice session"""
+    data = request.get_json()
+    mentor_id = data.get('mentor_id')
+    feedback_data = data.get('feedback')
+    mentor_service.provide_feedback(mentor_id, session_id, feedback_data)
+    return jsonify({'message': 'Feedback provided'}), 200
+
+@mentor_bp.route('/feedback/learner', methods=['POST'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Create general feedback for a learner',
+    'responses': {'201': {'description': 'Feedback created'}}
+})
+def create_learner_feedback():
+    """Create general feedback for a learner"""
+    data = request.get_json()
+    mentor_id = data.get('mentor_id')
+    learner_id = data.get('learner_id')
+    feedback = mentor_service.create_learner_feedback(mentor_id, learner_id, data)
+    return jsonify({'id': feedback.id, 'message': 'Feedback created'}), 201
+
+# ==================== ASSESSMENT ====================
+@mentor_bp.route('/assess', methods=['POST'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Assess a learner',
+    'responses': {'201': {'description': 'Assessment created'}}
+})
+def assess_learner():
+    """Assess a learner's proficiency"""
+    data = request.get_json()
+    mentor_id = data.get('mentor_id')
+    learner_id = data.get('learner_id')
+    assessment_data = data.get('assessment')
+    assessment = mentor_service.assess_learner(mentor_id, learner_id, assessment_data)
+    return jsonify({
+        'id': assessment.id,
+        'level': assessment.determined_level,
+        'message': 'Assessment completed'
+    }), 201
+
+# ==================== RESOURCES ====================
+@mentor_bp.route('/resources/<int:mentor_id>', methods=['GET'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Get mentor resources',
+    'responses': {'200': {'description': 'List of resources'}}
+})
+def get_resources(mentor_id):
+    """Get mentor's shared resources"""
+    resources = mentor_service.get_resources(mentor_id)
+    return jsonify(resources), 200
+
+@mentor_bp.route('/resources', methods=['POST'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Share a resource',
+    'responses': {'201': {'description': 'Resource shared'}}
+})
+def share_resource():
+    """Share a resource with learners"""
+    data = request.get_json()
+    mentor_id = data.get('mentor_id')
+    resource = mentor_service.share_resource(mentor_id, data)
+    return jsonify({'message': 'Resource shared'}), 201

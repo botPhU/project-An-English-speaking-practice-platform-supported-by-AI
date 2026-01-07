@@ -18,6 +18,7 @@ export const LEARNER_ROUTES = {
     DASHBOARD: '/dashboard',
     PROFILE: '/profile',
     SPEAKING_PRACTICE: '/practice',
+    AI_PRACTICE: '/practice/ai',  // AI-powered speaking practice
     CHALLENGES: '/challenges',  // Speaking Challenges
     COMMUNITY: '/community',    // Practice with Others, Reviews, Mentors
     PROGRESS: '/progress',      // Performance Reports, Tracking, AI Feedback, Scoring
@@ -47,4 +48,5 @@ export const AUTH_ROUTES = {
     LOGIN: '/login',
     REGISTER: '/register',
     FORGOT_PASSWORD: '/forgot-password',
+    COMPLETE_PROFILE: '/complete-profile',
 };

@@ -1,9 +1,10 @@
 from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.orm import relationship
 from infrastructure.databases.base import Base
 
 class CourseModel(Base):
     __tablename__ = 'courses'
-    __table_args__ = {'extend_existing': True}  # Thêm dòng này
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True)
     course_name = Column(String(255), nullable=False)
@@ -12,7 +13,8 @@ class CourseModel(Base):
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
     created_at = Column(DateTime)
-    updated_at = Column(DateTime) 
+    updated_at = Column(DateTime)
     
-    # ORM: Object Relational Mapping
-    # Anhs xa giua database va object trong code
+    # Relationships (One-to-Many: 1 Course có nhiều registrations)
+    # ORM: Object Relational Mapping - Ánh xạ giữa database và object trong code
+    registrations = relationship("CourseRegisterModel", back_populates="course")

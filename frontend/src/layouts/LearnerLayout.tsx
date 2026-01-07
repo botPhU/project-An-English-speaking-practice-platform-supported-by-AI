@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { LEARNER_ROUTES, AUTH_ROUTES } from '../routes/paths';
+import { useAuth } from '../context/AuthContext';
 
 interface LearnerLayoutProps {
     children: ReactNode;
@@ -20,6 +21,7 @@ const navItems = [
 export default function LearnerLayout({ children, title = 'AESP' }: LearnerLayoutProps) {
     const location = useLocation();
     const navigate = useNavigate();
+    const { user, logout } = useAuth();
 
     const isNavActive = (path: string, exact: boolean) => {
         if (exact) {
@@ -29,8 +31,7 @@ export default function LearnerLayout({ children, title = 'AESP' }: LearnerLayou
     };
 
     const handleLogout = () => {
-        // Clear any auth tokens/session if needed
-        // localStorage.removeItem('token');
+        logout();
         navigate(AUTH_ROUTES.LOGIN);
     };
 
@@ -106,11 +107,11 @@ export default function LearnerLayout({ children, title = 'AESP' }: LearnerLayou
                         </button>
                         <div className="flex items-center gap-3 pl-6 border-l border-border-dark cursor-pointer group">
                             <div className="text-right hidden sm:block">
-                                <p className="text-sm font-bold group-hover:text-primary transition-colors">Alex Nguyen</p>
-                                <p className="text-[10px] text-text-secondary font-bold uppercase tracking-tighter">Level 12</p>
+                                <p className="text-sm font-bold group-hover:text-primary transition-colors">{user?.name || 'Học viên'}</p>
+                                <p className="text-[10px] text-text-secondary font-bold uppercase tracking-tighter">Level 1</p>
                             </div>
                             <div className="size-10 rounded-full bg-primary/20 border-2 border-primary overflow-hidden group-hover:scale-110 transition-transform">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" alt="Avatar" />
+                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Guest'}`} alt="Avatar" />
                             </div>
                         </div>
                     </div>

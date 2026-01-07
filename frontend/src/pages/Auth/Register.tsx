@@ -1,19 +1,68 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authService } from '../../services/authService';
 
 // Register page - Đăng ký (Learner)
 export default function Register() {
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
+    const [userName, setUserName] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // TODO: Implement register logic
-        console.log('Register:', { fullName, email, password, confirmPassword });
+        setError('');
+
+        // Validation
+        if (!userName || !email || !password) {
+            setError('Vui lòng điền đầy đủ thông tin');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setError('Mật khẩu xác nhận không khớp');
+            return;
+        }
+
+        if (password.length < 6) {
+            setError('Mật khẩu phải có ít nhất 6 ký tự');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const response = await authService.register({
+                user_name: userName,
+                email: email,
+                password: password,
+                full_name: fullName,
+                role: 'learner'
+            });
+
+            // Auto-login after registration by storing tokens
+            const data = response.data as any;
+            if (data.access_token) {
+                localStorage.setItem('accessToken', data.access_token);
+            }
+            if (data.refresh_token) {
+                localStorage.setItem('refreshToken', data.refresh_token);
+            }
+
+            // Redirect to profile completion page
+            navigate('/complete-profile');
+        } catch (err: any) {
+            console.error('Register error:', err);
+            setError(err.response?.data?.error || 'Đăng ký thất bại. Vui lòng thử lại.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -85,6 +134,33 @@ export default function Register() {
 
                     {/* Register Form */}
                     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+                        {/* Error Message */}
+                        {error && (
+                            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                                {error}
+                            </div>
+                        )}
+
+                        {/* Username Field */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[#111418] dark:text-white text-base font-medium leading-normal">
+                                Tên đăng nhập <span className="text-red-500">*</span>
+                            </label>
+                            <div className="flex w-full items-stretch rounded-lg h-14 relative group">
+                                <div className="absolute left-0 top-0 bottom-0 pl-4 flex items-center pointer-events-none z-10 text-[#637588] dark:text-[#9dabb9]">
+                                    <span className="material-symbols-outlined text-[24px]">person</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={userName}
+                                    onChange={(e) => setUserName(e.target.value)}
+                                    className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] dark:text-white focus:ring-2 focus:ring-[#2b8cee]/50 border border-[#dce0e5] dark:border-[#3b4754] bg-white dark:bg-[#1c2127] focus:border-[#2b8cee] h-full placeholder:text-[#9dabb9] pl-12 pr-4 text-base font-normal leading-normal transition-all duration-200"
+                                    placeholder="Nhập tên đăng nhập"
+                                    required
+                                />
+                            </div>
+                        </div>
+
                         {/* Full Name Field */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[#111418] dark:text-white text-base font-medium leading-normal">
@@ -194,9 +270,10 @@ export default function Register() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#2b8cee] hover:bg-[#2b8cee]/90 text-white text-base font-bold leading-normal tracking-[0.015em] transition-all duration-200 shadow-lg shadow-[#2b8cee]/20 mt-2"
+                            disabled={loading}
+                            className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#2b8cee] hover:bg-[#2b8cee]/90 text-white text-base font-bold leading-normal tracking-[0.015em] transition-all duration-200 shadow-lg shadow-[#2b8cee]/20 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <span className="truncate">Đăng ký</span>
+                            <span className="truncate">{loading ? 'Đang đăng ký...' : 'Đăng ký'}</span>
                         </button>
                     </form>
 

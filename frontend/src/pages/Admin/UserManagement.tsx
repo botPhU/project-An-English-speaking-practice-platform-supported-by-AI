@@ -1,88 +1,214 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { AdminLayout } from '../../components/layout';
+import { adminService } from '../../services/adminService';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import type { WebSocketMessage, OnlineStatus, UserStatusChangePayload } from '../../types/websocket';
+
+// Socket.IO configuration - connects to Flask-SocketIO backend
+const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5000';
 
 // Types
 interface User {
     id: string;
     name: string;
     email: string;
-    avatar: string;
-    role: 'learner' | 'teacher';
+    avatar?: string;
+    role: 'learner' | 'mentor' | 'admin';
     lastActive: string;
     package: string;
     status: boolean;
+    onlineStatus: OnlineStatus; // Real-time online status from WebSocket
 }
 
-// Mock data
-const mockUsers: User[] = [
-    {
-        id: 'USR001',
-        name: 'Nguyễn Văn A',
-        email: 'nguyenvana@gmail.com',
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBoazDRh-6QNX7KlaT8oAZbkK8BjhKdyxP2aajF5Q1FLuQexSUo01EOJfqDNZN5vbmR_eFdGlcLfc61Jzq2TvkE1jaI2yJoxtA3WmamyKEyG0zcP6uOIRZE0zU60s75tlTYLN0nQR5fdCmGlWHMHpuXt4ugLXNnfa89Sxk8nT2ma_G9o_dEfROmgqqJmqmJjnnACKDR4ReVVN9241TsRE6jC3GJ5IwNrmSaJ62Rs5RbQkfzBTU3pSxKAqj2QO3tw1pea29LlUXplzg',
-        role: 'learner',
-        lastActive: '2 phút trước',
-        package: 'Pro (Năm)',
-        status: true
-    },
-    {
-        id: 'USR002',
-        name: 'Trần Thị B',
-        email: 'tranthib@edu.vn',
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA9h_-R-Do7kBOsaP5Jv9XVgZryKTxttF5uVMMBusEtZjcz0MIIIhaPZNWyzzGhbaXhH0QkCHOeROtKouiamBwkvF-o83jTsw5DHccHb8DP1Br38vkQ0qYjlQ7Ie-Dv72A0a5oWbPYgU9qxRusOee3bmPdhoLh8A6rZVjV-dRlUOap1WVKOQUlnSJOCW4Beadw4eDrfKwIHMWYbMQuxNvNyroBXaO1mEz7GwXV0dP03nQJWdvarQLwy7cBHH_-oMsAQ5gMFY4tO3SY',
-        role: 'teacher',
-        lastActive: '1 ngày trước',
-        package: '--',
-        status: true
-    },
-    {
-        id: 'USR003',
-        name: 'Lê Văn C',
-        email: 'levanc_student@gmail.com',
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCi-63mXDMJ6GgoAnoaZR3ks-Gcnc4PPkm9EKrN4OA-UNc6G00SFgWVTxWeQscWG_gU_3zfNTW-bnC1VATjb-PnFLVEKK_oIw8bVt6gaxUnSCq21UIuVQWZcQEmlm9axTbaee_8jzhKWfb_-bM5VoS5slErIaHkl_fxtv6hxQcQIw8CWF3S7UrURnggA_Sz_R47wo6aE4xD3LeChA4Gdo_329VHb3T2OtzAdWeWp_JGPoKnd_vSUucR81CzrO6fvIRv01AnWgAAzys',
-        role: 'learner',
-        lastActive: '3 giờ trước',
-        package: 'Cơ bản (Tháng)',
-        status: false
-    },
-    {
-        id: 'USR004',
-        name: 'Phạm Đức D',
-        email: 'ducdpham@outlook.com',
-        avatar: '',
-        role: 'learner',
-        lastActive: '15 tháng 10, 2023',
-        package: 'Miễn phí',
-        status: true
-    },
-    {
-        id: 'USR005',
-        name: 'Sarah Miller',
-        email: 'sarah.teacher@aesp.com',
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD8-Eo_MZ8WPVPA1qk3vY00TcpllNvPS2eu7M5g9xohVSZcF1i7xhIFzlu0pAzcMf3Oo13j5i4vmDwNbaqLxdKRxYZ2K92baFN_jwJeIH3tye9z-0spDpN96trJ3uU9jM_2Myzyb603haYi3DJAikts_nJZBaqWcRIxjm02oD3oa_n5wAye6cbkIWXWJC65Ssm9kvPP45mxg1uBZonLUM176mIWRl2H02A2AQ6u8YTGKCpf8Ux95xxtvpTVdM0pnnwmVLTljNb7g-4',
-        role: 'teacher',
-        lastActive: 'Vừa xong',
-        package: '--',
-        status: true
-    }
-];
+// Memoized UserRow component to prevent unnecessary re-renders
+interface UserRowProps {
+    user: User;
+    onToggleStatus: (userId: string) => void;
+    getRoleBadge: (role: User['role']) => React.ReactNode;
+    getInitials: (name: string) => string;
+}
 
-const mockStats = {
-    totalUsers: { count: 1240, change: '+12%' },
-    activeLearners: { count: 850, change: '+5%' },
-    teachers: { count: 45, change: '+2%' }
-};
+const UserRow = memo(({ user, onToggleStatus, getRoleBadge, getInitials }: UserRowProps) => {
+    return (
+        <tr className="group hover:bg-[#283039] transition-colors">
+            <td className="p-4">
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        {user.avatar ? (
+                            <div
+                                className="size-10 rounded-full bg-cover bg-center bg-gray-600"
+                                style={{ backgroundImage: `url("${user.avatar}")` }}
+                            />
+                        ) : (
+                            <div className="size-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm">
+                                {getInitials(user.name)}
+                            </div>
+                        )}
+                        {/* Online Status Indicator */}
+                        <span
+                            className={`absolute bottom-0 right-0 size-3 rounded-full border-2 border-[#1a222a] transition-all duration-300 ${user.onlineStatus === 'online'
+                                ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
+                                : user.onlineStatus === 'away'
+                                    ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]'
+                                    : 'bg-gray-500'
+                                }`}
+                            title={user.onlineStatus === 'online' ? 'Đang hoạt động' : user.onlineStatus === 'away' ? 'Vắng mặt' : 'Ngoại tuyến'}
+                        />
+                    </div>
+                    <div>
+                        <p className="font-medium text-white">{user.name}</p>
+                        <p className="text-xs text-[#9dabb9]">{user.email}</p>
+                    </div>
+                </div>
+            </td>
+            <td className="p-4">{getRoleBadge(user.role)}</td>
+            <td className="p-4 text-[#9dabb9]">{user.package}</td>
+            <td className="p-4 text-[#9dabb9]">{user.lastActive}</td>
+            <td className="p-4">
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={user.status}
+                        onChange={() => onToggleStatus(user.id)}
+                    />
+                    <div className="w-11 h-6 bg-[#3b4754] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+            </td>
+            <td className="p-4 text-right">
+                <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors"
+                        title="Xem chi tiết"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">visibility</span>
+                    </button>
+                    <button
+                        className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors"
+                        title="Chỉnh sửa"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">edit</span>
+                    </button>
+                    <button
+                        className="p-1.5 hover:bg-red-500/20 text-[#9dabb9] hover:text-red-500 rounded-lg transition-colors"
+                        title="Xóa"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">delete</span>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
+});
 
-type RoleFilter = 'all' | 'learner' | 'teacher';
+interface UserStats {
+    totalUsers: { count: number; change: string };
+    activeLearners: { count: number; change: string };
+    teachers: { count: number; change: string };
+}
+
+type RoleFilter = 'all' | 'learner' | 'mentor';
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 const UserManagement: React.FC = () => {
+    const [users, setUsers] = useState<User[]>([]);
+    const [stats, setStats] = useState<UserStats | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-    const [users, setUsers] = useState(mockUsers);
 
-    // Filter users
+    // WebSocket message handler - memoized to prevent unnecessary reconnections
+    const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
+        console.log('[UserManagement] Received WebSocket message:', message);
+
+        if (message.type === 'USER_STATUS_CHANGE') {
+            const { userId, status, lastActive } = message.payload as UserStatusChangePayload;
+            const userIdStr = String(userId);
+
+            console.log(`[UserManagement] User ${userIdStr} status changed to: ${status}`);
+
+            // Functional update - only updates the specific user, minimizing re-renders
+            setUsers(prevUsers => {
+                const updatedUsers = prevUsers.map(user =>
+                    String(user.id) === userIdStr
+                        ? {
+                            ...user,
+                            onlineStatus: status,
+                            lastActive: lastActive || user.lastActive
+                        }
+                        : user
+                );
+
+                const foundUser = updatedUsers.find(u => String(u.id) === userIdStr);
+                console.log(`[UserManagement] User found: ${foundUser?.name || 'NOT FOUND'}, new status: ${foundUser?.onlineStatus}`);
+
+                return updatedUsers;
+            });
+        }
+    }, []);
+
+    // WebSocket connection
+    const { isConnected, connectionState } = useWebSocket({
+        url: WS_URL,
+        onMessage: handleWebSocketMessage,
+        autoConnect: true,
+    });
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [usersResponse, statsResponse] = await Promise.all([
+                adminService.getUsers(),
+                adminService.getUserStats()
+            ]);
+
+            // Map API response to component format
+            const mappedUsers = (usersResponse.data.users || usersResponse.data || []).map((user: any) => ({
+                id: user.id?.toString() || user.user_id?.toString(),
+                name: user.name || user.full_name || user.user_name,
+                email: user.email,
+                avatar: user.avatar || user.profile_picture,
+                role: user.role || 'learner',
+                lastActive: user.last_active || user.lastActive || 'N/A',
+                package: user.package || user.subscription_plan || '--',
+                status: user.status === 'active' || user.is_active !== false,
+                onlineStatus: (user.online_status || user.onlineStatus || 'offline') as OnlineStatus
+            }));
+
+            setUsers(mappedUsers);
+
+            // Map stats response
+            const apiStats = statsResponse.data;
+            setStats({
+                totalUsers: { count: apiStats.total_users || apiStats.totalUsers || 0, change: apiStats.users_change || '+0%' },
+                activeLearners: { count: apiStats.active_learners || apiStats.activeLearners || 0, change: apiStats.learners_change || '+0%' },
+                teachers: { count: apiStats.total_mentors || apiStats.teachers || 0, change: apiStats.mentors_change || '+0%' }
+            });
+
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching users:', err);
+            setError('Không thể tải danh sách người dùng');
+            // Set empty stats instead of mock data
+            setStats({
+                totalUsers: { count: 0, change: 'Chưa có dữ liệu' },
+                activeLearners: { count: 0, change: 'Chưa có dữ liệu' },
+                teachers: { count: 0, change: 'Chưa có dữ liệu' }
+            });
+            setUsers([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Filter users based on search and filters
     const filteredUsers = users.filter(user => {
         const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             user.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -95,45 +221,72 @@ const UserManagement: React.FC = () => {
         return matchesSearch && matchesRole && matchesStatus;
     });
 
-    const toggleUserStatus = (userId: string) => {
-        setUsers(users.map(user =>
-            user.id === userId ? { ...user, status: !user.status } : user
-        ));
-    };
+    // Memoized toggle handler for UserRow
+    const toggleUserStatus = useCallback(async (userId: string) => {
+        const user = users.find(u => u.id === userId);
+        if (!user) return;
 
-    const getRoleBadge = (role: User['role']) => {
-        if (role === 'learner') {
-            return (
-                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                    Học viên
-                </span>
-            );
+        try {
+            if (user.status) {
+                await adminService.disableUser(userId);
+            } else {
+                await adminService.enableUser(userId);
+            }
+
+            setUsers(prev => prev.map(u =>
+                u.id === userId ? { ...u, status: !u.status } : u
+            ));
+        } catch (err) {
+            console.error('Error toggling user status:', err);
         }
-        return (
-            <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                Giáo viên
-            </span>
-        );
-    };
+    }, [users]);
 
-    const getInitials = (name: string) => {
-        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-    };
+    // Memoized helper functions for UserRow
+    const getInitialsMemo = useCallback((name: string) => {
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }, []);
+
+    const getRoleBadgeMemo = useCallback((role: User['role']) => {
+        switch (role) {
+            case 'learner':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/30">
+                        Người học
+                    </span>
+                );
+            case 'mentor':
+                return (
+                    <span className="inline-flex items-center rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-400 ring-1 ring-inset ring-purple-500/30">
+                        Giảng viên
+                    </span>
+                );
+            default:
+                return null;
+        }
+    }, []);
+
 
     return (
         <AdminLayout
             title="Quản Lý Người Dùng"
-            subtitle="Quản lý học viên, giáo viên và trạng thái hoạt động trên hệ thống"
+            subtitle="Quản lý tài khoản người học và giáo viên"
             icon="group"
             actions={
-                <div className="flex gap-3">
-                    <button className="bg-[#283039] hover:bg-[#3b4754] border border-[#3b4754] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">download</span>
-                        Xuất dữ liệu
-                    </button>
+                <div className="flex items-center gap-3">
+                    {/* WebSocket Connection Status */}
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${isConnected
+                        ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/30'
+                        : connectionState === 'reconnecting'
+                            ? 'bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/30 animate-pulse'
+                            : 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30'
+                        }`}>
+                        <span className={`size-2 rounded-full ${isConnected ? 'bg-green-500' : connectionState === 'reconnecting' ? 'bg-yellow-500' : 'bg-red-500'
+                            }`} />
+                        {isConnected ? 'Realtime' : connectionState === 'reconnecting' ? 'Đang kết nối...' : 'Offline'}
+                    </div>
                     <button className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/25 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">add</span>
-                        Thêm mới
+                        <span className="material-symbols-outlined text-[18px]">person_add</span>
+                        Thêm người dùng
                     </button>
                 </div>
             }
@@ -148,49 +301,61 @@ const UserManagement: React.FC = () => {
                                 groups
                             </span>
                         </div>
-                        <div className="flex items-baseline gap-2">
-                            <p className="text-white tracking-tight text-3xl font-bold">{mockStats.totalUsers.count.toLocaleString()}</p>
-                            <span className="text-[#0bda5b] text-sm font-medium bg-[#0bda5b]/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                                {mockStats.totalUsers.change}
-                            </span>
-                        </div>
+                        {loading ? (
+                            <div className="h-9 w-20 bg-[#3e4854] animate-pulse rounded"></div>
+                        ) : (
+                            <>
+                                <p className="text-white tracking-tight text-3xl font-bold">{stats?.totalUsers.count.toLocaleString()}</p>
+                                <div className="flex items-center gap-1 text-[#0bda5b] text-xs font-medium">
+                                    <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                                    <span>{stats?.totalUsers.change} tháng này</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                     <div className="flex flex-col gap-2 rounded-xl p-5 bg-[#283039] border border-[#3b4754] shadow-sm">
                         <div className="flex justify-between items-start">
-                            <p className="text-[#9dabb9] text-sm font-medium">Học viên hoạt động</p>
-                            <span className="material-symbols-outlined text-[#a0e8af] bg-[#a0e8af]/10 p-1 rounded-md text-[20px]">
+                            <p className="text-[#9dabb9] text-sm font-medium">Người học hoạt động</p>
+                            <span className="material-symbols-outlined text-[#0bda5b] bg-[#0bda5b]/10 p-1 rounded-md text-[20px]">
                                 school
                             </span>
                         </div>
-                        <div className="flex items-baseline gap-2">
-                            <p className="text-white tracking-tight text-3xl font-bold">{mockStats.activeLearners.count}</p>
-                            <span className="text-[#0bda5b] text-sm font-medium bg-[#0bda5b]/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                                {mockStats.activeLearners.change}
-                            </span>
-                        </div>
+                        {loading ? (
+                            <div className="h-9 w-20 bg-[#3e4854] animate-pulse rounded"></div>
+                        ) : (
+                            <>
+                                <p className="text-white tracking-tight text-3xl font-bold">{stats?.activeLearners.count.toLocaleString()}</p>
+                                <div className="flex items-center gap-1 text-[#0bda5b] text-xs font-medium">
+                                    <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                                    <span>{stats?.activeLearners.change} tháng này</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                     <div className="flex flex-col gap-2 rounded-xl p-5 bg-[#283039] border border-[#3b4754] shadow-sm">
                         <div className="flex justify-between items-start">
                             <p className="text-[#9dabb9] text-sm font-medium">Giáo viên</p>
-                            <span className="material-symbols-outlined text-[#e8cba0] bg-[#e8cba0]/10 p-1 rounded-md text-[20px]">
-                                cast_for_education
+                            <span className="material-symbols-outlined text-purple-400 bg-purple-400/10 p-1 rounded-md text-[20px]">
+                                supervisor_account
                             </span>
                         </div>
-                        <div className="flex items-baseline gap-2">
-                            <p className="text-white tracking-tight text-3xl font-bold">{mockStats.teachers.count}</p>
-                            <span className="text-[#0bda5b] text-sm font-medium bg-[#0bda5b]/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                <span className="material-symbols-outlined text-[14px]">trending_up</span>
-                                {mockStats.teachers.change}
-                            </span>
-                        </div>
+                        {loading ? (
+                            <div className="h-9 w-20 bg-[#3e4854] animate-pulse rounded"></div>
+                        ) : (
+                            <>
+                                <p className="text-white tracking-tight text-3xl font-bold">{stats?.teachers.count}</p>
+                                <div className="flex items-center gap-1 text-[#0bda5b] text-xs font-medium">
+                                    <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                                    <span>{stats?.teachers.change} tháng này</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
                 {/* Search & Filter */}
-                <div className="flex flex-col lg:flex-row gap-4 items-end lg:items-center justify-between bg-[#283039]/50 p-4 rounded-xl border border-[#3b4754]">
-                    <div className="flex flex-1 w-full gap-4 flex-col lg:flex-row">
+                <div className="flex flex-col md:flex-row gap-4 items-end md:items-center justify-between bg-[#283039]/50 p-4 rounded-xl border border-[#3b4754]">
+                    <div className="flex flex-1 w-full gap-4 flex-col md:flex-row">
                         <div className="relative flex-1 min-w-[240px]">
                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#9dabb9]">
                                 search
@@ -198,33 +363,39 @@ const UserManagement: React.FC = () => {
                             <input
                                 type="text"
                                 className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg pl-11 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-[#9dabb9]/60"
-                                placeholder="Tìm theo tên, email hoặc ID..."
+                                placeholder="Tìm kiếm tên hoặc email..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <div className="relative w-full lg:w-48">
+                        <div className="relative w-full md:w-40">
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#9dabb9]">
+                                badge
+                            </span>
                             <select
                                 value={roleFilter}
                                 onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-                                className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg pl-4 pr-8 py-2.5 appearance-none focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                                className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg pl-11 pr-8 py-2.5 appearance-none focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                             >
-                                <option value="all">Tất cả vai trò</option>
-                                <option value="learner">Học viên</option>
-                                <option value="teacher">Giáo viên</option>
+                                <option value="all">Tất cả</option>
+                                <option value="learner">Người học</option>
+                                <option value="mentor">Giảng viên</option>
                             </select>
                             <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#9dabb9] pointer-events-none text-sm">
                                 expand_more
                             </span>
                         </div>
-                        <div className="relative w-full lg:w-48">
+                        <div className="relative w-full md:w-40">
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#9dabb9]">
+                                filter_list
+                            </span>
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                                className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg pl-4 pr-8 py-2.5 appearance-none focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                                className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg pl-11 pr-8 py-2.5 appearance-none focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                             >
                                 <option value="all">Tất cả trạng thái</option>
-                                <option value="active">Đang hoạt động</option>
+                                <option value="active">Hoạt động</option>
                                 <option value="inactive">Vô hiệu hóa</option>
                             </select>
                             <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#9dabb9] pointer-events-none text-sm">
@@ -242,67 +413,50 @@ const UserManagement: React.FC = () => {
                                 <tr>
                                     <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Người dùng</th>
                                     <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Vai trò</th>
-                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Hoạt động cuối</th>
                                     <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Gói dịch vụ</th>
-                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider text-center">Trạng thái</th>
+                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Hoạt động cuối</th>
+                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Trạng thái</th>
                                     <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider text-right">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#3b4754]">
-                                {filteredUsers.map((user) => (
-                                    <tr key={user.id} className="group hover:bg-[#283039] transition-colors">
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-3">
-                                                {user.avatar ? (
-                                                    <div
-                                                        className="size-10 rounded-full bg-cover bg-center ring-2 ring-[#3b4754]"
-                                                        style={{ backgroundImage: `url("${user.avatar}")` }}
-                                                    />
-                                                ) : (
-                                                    <div className="flex items-center justify-center size-10 rounded-full bg-[#283039] text-white font-bold ring-2 ring-[#3b4754]">
-                                                        {getInitials(user.name)}
+                                {loading ? (
+                                    // Loading skeleton
+                                    [...Array(5)].map((_, i) => (
+                                        <tr key={i}>
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="size-10 rounded-full bg-[#3e4854] animate-pulse"></div>
+                                                    <div className="space-y-2">
+                                                        <div className="h-4 w-32 bg-[#3e4854] animate-pulse rounded"></div>
+                                                        <div className="h-3 w-40 bg-[#3e4854] animate-pulse rounded"></div>
                                                     </div>
-                                                )}
-                                                <div className="flex flex-col">
-                                                    <span className="text-white font-medium text-sm">{user.name}</span>
-                                                    <span className="text-[#9dabb9] text-xs">{user.email}</span>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-4">{getRoleBadge(user.role)}</td>
-                                        <td className="p-4 text-white text-sm">{user.lastActive}</td>
-                                        <td className={`p-4 text-sm ${user.package === '--' ? 'text-[#9dabb9] italic' : 'text-white'}`}>
-                                            {user.package}
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={user.status}
-                                                    onChange={() => toggleUserStatus(user.id)}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-[#3b4754] rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary" />
-                                            </label>
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors"
-                                                    title="Chỉnh sửa"
-                                                >
-                                                    <span className="material-symbols-outlined text-[20px]">edit</span>
-                                                </button>
-                                                <button
-                                                    className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors"
-                                                    title="Đặt lại mật khẩu"
-                                                >
-                                                    <span className="material-symbols-outlined text-[20px]">lock_reset</span>
-                                                </button>
-                                            </div>
+                                            </td>
+                                            <td className="p-4"><div className="h-6 w-20 bg-[#3e4854] animate-pulse rounded-full"></div></td>
+                                            <td className="p-4"><div className="h-4 w-16 bg-[#3e4854] animate-pulse rounded"></div></td>
+                                            <td className="p-4"><div className="h-4 w-24 bg-[#3e4854] animate-pulse rounded"></div></td>
+                                            <td className="p-4"><div className="h-6 w-12 bg-[#3e4854] animate-pulse rounded-full"></div></td>
+                                            <td className="p-4"><div className="h-8 w-20 bg-[#3e4854] animate-pulse rounded ml-auto"></div></td>
+                                        </tr>
+                                    ))
+                                ) : filteredUsers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="p-8 text-center text-[#9dabb9]">
+                                            {error || 'Không tìm thấy người dùng nào'}
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    filteredUsers.map((user) => (
+                                        <UserRow
+                                            key={user.id}
+                                            user={user}
+                                            onToggleStatus={toggleUserStatus}
+                                            getRoleBadge={getRoleBadgeMemo}
+                                            getInitials={getInitialsMemo}
+                                        />
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -313,30 +467,22 @@ const UserManagement: React.FC = () => {
                             <div>
                                 <p className="text-sm text-[#9dabb9]">
                                     Hiển thị <span className="font-medium text-white">1</span> đến{' '}
-                                    <span className="font-medium text-white">{filteredUsers.length}</span> trong số{' '}
-                                    <span className="font-medium text-white">{mockStats.totalUsers.count.toLocaleString()}</span> kết quả
+                                    <span className="font-medium text-white">{filteredUsers.length}</span> của{' '}
+                                    <span className="font-medium text-white">{users.length}</span> kết quả
                                 </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button className="relative inline-flex items-center rounded-l-md px-2 py-2 text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039]">
-                                    <span className="material-symbols-outlined text-[20px]">chevron_left</span>
-                                </button>
-                                <button className="relative z-10 inline-flex items-center bg-primary px-4 py-2 text-sm font-semibold text-white rounded">
-                                    1
-                                </button>
-                                <button className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039] rounded">
-                                    2
-                                </button>
-                                <button className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039] rounded">
-                                    3
-                                </button>
-                                <span className="text-[#9dabb9]">...</span>
-                                <button className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039] rounded">
-                                    12
-                                </button>
-                                <button className="relative inline-flex items-center rounded-r-md px-2 py-2 text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039]">
-                                    <span className="material-symbols-outlined text-[20px]">chevron_right</span>
-                                </button>
+                            <div>
+                                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
+                                    <button className="relative inline-flex items-center rounded-l-md px-2 py-2 text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039]">
+                                        <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+                                    </button>
+                                    <button className="relative z-10 inline-flex items-center bg-primary px-4 py-2 text-sm font-semibold text-white">
+                                        1
+                                    </button>
+                                    <button className="relative inline-flex items-center rounded-r-md px-2 py-2 text-[#9dabb9] ring-1 ring-inset ring-[#3b4754] hover:bg-[#283039]">
+                                        <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                                    </button>
+                                </nav>
                             </div>
                         </div>
                     </div>

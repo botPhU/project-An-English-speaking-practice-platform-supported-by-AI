@@ -1,213 +1,185 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/layout';
+import { adminService } from '../../services/adminService';
 
-// Mock data for policies
-const mockPolicies = [
-    { id: 1, title: 'Điều khoản sử dụng', slug: 'terms-of-service', status: 'published', lastUpdated: '2024-12-15', version: '2.1' },
-    { id: 2, title: 'Chính sách bảo mật', slug: 'privacy-policy', status: 'published', lastUpdated: '2024-12-10', version: '1.5' },
-    { id: 3, title: 'Chính sách hoàn tiền', slug: 'refund-policy', status: 'draft', lastUpdated: '2024-12-20', version: '1.0' },
-    { id: 4, title: 'Quy tắc cộng đồng', slug: 'community-guidelines', status: 'published', lastUpdated: '2024-11-25', version: '1.2' },
-    { id: 5, title: 'Chính sách Cookie', slug: 'cookie-policy', status: 'draft', lastUpdated: '2024-12-18', version: '1.0' },
-];
+interface Policy {
+    id: number;
+    title: string;
+    slug: string;
+    status: 'published' | 'draft';
+    lastUpdated: string;
+    version: string;
+    content?: string;
+}
 
-export default function PolicyManagement() {
-    const [policies] = useState(mockPolicies);
-    const [selectedPolicy, setSelectedPolicy] = useState<typeof mockPolicies[0] | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editorContent, setEditorContent] = useState('');
+const PolicyManagement: React.FC = () => {
+    const [policies, setPolicies] = useState<Policy[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleEdit = (policy: typeof mockPolicies[0]) => {
+    const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
+    const [editContent, setEditContent] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const response = await adminService.getPolicies();
+
+            const policyData = response.data.policies || response.data || [];
+            const mappedPolicies = policyData.map((policy: any) => ({
+                id: policy.id,
+                title: policy.title,
+                slug: policy.slug,
+                status: policy.status || 'draft',
+                lastUpdated: policy.last_updated || policy.updated_at || 'N/A',
+                version: policy.version || '1.0',
+                content: policy.content || ''
+            }));
+
+            setPolicies(mappedPolicies);
+            if (mappedPolicies.length > 0) {
+                setSelectedPolicy(mappedPolicies[0]);
+                setEditContent(mappedPolicies[0].content || '');
+            }
+
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching policies:', err);
+            setError('Không thể tải chính sách');
+            // Set empty state instead of fallback mock data
+            setPolicies([]);
+            setSelectedPolicy(null);
+            setEditContent('');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSelectPolicy = (policy: Policy) => {
         setSelectedPolicy(policy);
-        setEditorContent(`# ${policy.title}\n\nNội dung của chính sách "${policy.title}" sẽ được hiển thị và chỉnh sửa tại đây.\n\n## 1. Giới thiệu\n\nĐây là mẫu nội dung cho chính sách. Admin có thể chỉnh sửa toàn bộ nội dung này.\n\n## 2. Điều khoản chính\n\n- Điều khoản 1\n- Điều khoản 2\n- Điều khoản 3`);
-        setIsEditing(true);
+        setEditContent(policy.content || '');
+    };
+
+    const handleSave = async () => {
+        if (!selectedPolicy) return;
+
+        try {
+            setSaving(true);
+            await adminService.updatePolicy(selectedPolicy.id.toString(), { content: editContent });
+
+            setPolicies(prev => prev.map(p =>
+                p.id === selectedPolicy.id ? { ...p, content: editContent, lastUpdated: new Date().toISOString().split('T')[0] } : p
+            ));
+        } catch (err) {
+            console.error('Error saving policy:', err);
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
         <AdminLayout
             title="Quản Lý Chính Sách"
-            subtitle="Tạo và quản lý các chính sách, điều khoản sử dụng hệ thống"
+            subtitle="Quản lý nội dung điều khoản và chính sách"
             icon="policy"
             actions={
-                <button className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/25 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px]">add</span>
-                    Tạo chính sách mới
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                    <span className="material-symbols-outlined text-[18px]">{saving ? 'sync' : 'save'}</span>
+                    {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
             }
         >
-            <div className="max-w-[1400px] mx-auto flex flex-col gap-6">
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex flex-col gap-2 rounded-xl p-5 bg-[#283039] border border-[#3b4754] shadow-sm">
-                        <div className="flex justify-between items-start">
-                            <p className="text-[#9dabb9] text-sm font-medium">Tổng chính sách</p>
-                            <span className="material-symbols-outlined text-primary bg-primary/10 p-1 rounded-md text-[20px]">
-                                description
-                            </span>
-                        </div>
-                        <p className="text-white tracking-tight text-3xl font-bold">{policies.length}</p>
-                    </div>
-                    <div className="flex flex-col gap-2 rounded-xl p-5 bg-[#283039] border border-[#3b4754] shadow-sm">
-                        <div className="flex justify-between items-start">
-                            <p className="text-[#9dabb9] text-sm font-medium">Đã xuất bản</p>
-                            <span className="material-symbols-outlined text-[#0bda5b] bg-[#0bda5b]/10 p-1 rounded-md text-[20px]">
-                                public
-                            </span>
-                        </div>
-                        <p className="text-white tracking-tight text-3xl font-bold">
-                            {policies.filter(p => p.status === 'published').length}
-                        </p>
-                    </div>
-                    <div className="flex flex-col gap-2 rounded-xl p-5 bg-[#283039] border border-[#3b4754] shadow-sm">
-                        <div className="flex justify-between items-start">
-                            <p className="text-[#9dabb9] text-sm font-medium">Bản nháp</p>
-                            <span className="material-symbols-outlined text-yellow-500 bg-yellow-500/10 p-1 rounded-md text-[20px]">
-                                edit_note
-                            </span>
-                        </div>
-                        <p className="text-white tracking-tight text-3xl font-bold">
-                            {policies.filter(p => p.status === 'draft').length}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Policies List */}
-                <div className="rounded-xl border border-[#3b4754] bg-[#1a222a] overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="bg-[#283039] border-b border-[#3b4754]">
-                                <tr>
-                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Tên chính sách</th>
-                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Phiên bản</th>
-                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Cập nhật lần cuối</th>
-                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider">Trạng thái</th>
-                                    <th className="p-4 text-xs font-semibold text-[#9dabb9] uppercase tracking-wider text-right">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#3b4754]">
-                                {policies.map((policy) => (
-                                    <tr key={policy.id} className="group hover:bg-[#283039] transition-colors">
-                                        <td className="p-4">
-                                            <div>
-                                                <p className="font-semibold text-white">{policy.title}</p>
-                                                <p className="text-sm text-[#9dabb9]">/{policy.slug}</p>
+            <div className="max-w-[1400px] mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Policy List */}
+                    <div className="lg:col-span-1">
+                        <div className="rounded-xl bg-[#283039] border border-[#3b4754] overflow-hidden">
+                            <div className="p-4 border-b border-[#3b4754]">
+                                <h3 className="font-bold text-white">Danh sách chính sách</h3>
+                            </div>
+                            <div className="divide-y divide-[#3b4754]">
+                                {loading ? (
+                                    [...Array(3)].map((_, i) => (
+                                        <div key={i} className="p-4">
+                                            <div className="h-5 w-32 bg-[#3e4854] animate-pulse rounded mb-2"></div>
+                                            <div className="h-4 w-24 bg-[#3e4854] animate-pulse rounded"></div>
+                                        </div>
+                                    ))
+                                ) : policies.length === 0 ? (
+                                    <div className="p-4 text-center text-[#9dabb9]">{error || 'Không có chính sách'}</div>
+                                ) : (
+                                    policies.map((policy) => (
+                                        <button
+                                            key={policy.id}
+                                            onClick={() => handleSelectPolicy(policy)}
+                                            className={`w-full p-4 text-left hover:bg-[#3e4854]/50 transition-colors ${selectedPolicy?.id === policy.id ? 'bg-primary/10 border-l-2 border-primary' : ''}`}
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <h4 className={`font-medium ${selectedPolicy?.id === policy.id ? 'text-primary' : 'text-white'}`}>
+                                                    {policy.title}
+                                                </h4>
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${policy.status === 'published' ? 'bg-[#0bda5b]/20 text-[#0bda5b]' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                                                    {policy.status === 'published' ? 'Đã xuất bản' : 'Nháp'}
+                                                </span>
                                             </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <span className="px-3 py-1 rounded-full bg-[#111418] text-sm font-mono text-[#9dabb9]">
-                                                v{policy.version}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-[#9dabb9]">{policy.lastUpdated}</td>
-                                        <td className="p-4">
-                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${policy.status === 'published'
-                                                ? 'bg-[#0bda5b]/20 text-[#0bda5b] ring-[#0bda5b]/30'
-                                                : 'bg-yellow-500/20 text-yellow-500 ring-yellow-500/30'
-                                                }`}>
-                                                {policy.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={() => handleEdit(policy)}
-                                                    className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors"
-                                                    title="Chỉnh sửa"
-                                                >
-                                                    <span className="material-symbols-outlined text-[20px]">edit</span>
-                                                </button>
-                                                <button className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors" title="Xem lịch sử">
-                                                    <span className="material-symbols-outlined text-[20px]">history</span>
-                                                </button>
-                                                <button className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors" title="Xem trước">
-                                                    <span className="material-symbols-outlined text-[20px]">visibility</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                            <p className="text-xs text-[#9dabb9]">v{policy.version} • {policy.lastUpdated}</p>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                {/* Editor Modal */}
-                {isEditing && selectedPolicy && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-[#1c2127] rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col border border-[#3b4754]">
-                            {/* Modal Header */}
-                            <div className="flex items-center justify-between p-6 border-b border-[#3b4754]">
+                    {/* Editor */}
+                    <div className="lg:col-span-3">
+                        <div className="rounded-xl bg-[#283039] border border-[#3b4754] overflow-hidden">
+                            <div className="p-4 border-b border-[#3b4754] flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-xl font-bold text-white">
-                                        Chỉnh sửa: {selectedPolicy.title}
-                                    </h2>
-                                    <p className="text-sm text-[#9dabb9]">Phiên bản {selectedPolicy.version}</p>
+                                    <h3 className="font-bold text-white">{selectedPolicy?.title || 'Chọn chính sách'}</h3>
+                                    <p className="text-xs text-[#9dabb9]">slug: {selectedPolicy?.slug || 'N/A'}</p>
                                 </div>
-                                <button
-                                    onClick={() => setIsEditing(false)}
-                                    className="p-2 hover:bg-[#283039] rounded-lg transition-colors"
-                                >
-                                    <span className="material-symbols-outlined text-[#9dabb9]">close</span>
-                                </button>
+                                {selectedPolicy && (
+                                    <div className="flex gap-2">
+                                        <button className="px-3 py-1.5 text-sm text-[#9dabb9] hover:text-white hover:bg-[#3e4854] rounded-lg transition-colors">
+                                            Xem trước
+                                        </button>
+                                        <button className="px-3 py-1.5 text-sm text-[#9dabb9] hover:text-white hover:bg-[#3e4854] rounded-lg transition-colors">
+                                            Lịch sử
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-
-                            {/* Editor Toolbar */}
-                            <div className="flex items-center gap-2 px-6 py-3 border-b border-[#3b4754] bg-[#111418]">
-                                <button className="p-2 hover:bg-[#283039] rounded-lg transition-colors text-[#9dabb9]">
-                                    <span className="material-symbols-outlined text-[20px]">format_bold</span>
-                                </button>
-                                <button className="p-2 hover:bg-[#283039] rounded-lg transition-colors text-[#9dabb9]">
-                                    <span className="material-symbols-outlined text-[20px]">format_italic</span>
-                                </button>
-                                <button className="p-2 hover:bg-[#283039] rounded-lg transition-colors text-[#9dabb9]">
-                                    <span className="material-symbols-outlined text-[20px]">format_list_bulleted</span>
-                                </button>
-                                <button className="p-2 hover:bg-[#283039] rounded-lg transition-colors text-[#9dabb9]">
-                                    <span className="material-symbols-outlined text-[20px]">format_list_numbered</span>
-                                </button>
-                                <div className="h-6 w-px bg-[#3b4754] mx-2" />
-                                <button className="p-2 hover:bg-[#283039] rounded-lg transition-colors text-[#9dabb9]">
-                                    <span className="material-symbols-outlined text-[20px]">link</span>
-                                </button>
-                                <button className="p-2 hover:bg-[#283039] rounded-lg transition-colors text-[#9dabb9]">
-                                    <span className="material-symbols-outlined text-[20px]">image</span>
-                                </button>
-                            </div>
-
-                            {/* Editor Content */}
-                            <div className="flex-1 overflow-auto p-6">
-                                <textarea
-                                    value={editorContent}
-                                    onChange={(e) => setEditorContent(e.target.value)}
-                                    className="w-full h-full min-h-[400px] p-4 rounded-lg border border-[#3b4754] bg-[#111418] text-white font-mono text-sm resize-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                                    placeholder="Nhập nội dung chính sách..."
-                                />
-                            </div>
-
-                            {/* Modal Footer */}
-                            <div className="flex items-center justify-between p-6 border-t border-[#3b4754]">
-                                <div className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-[#9dabb9] text-[18px]">info</span>
-                                    <span className="text-sm text-[#9dabb9]">Sử dụng Markdown để định dạng</span>
-                                </div>
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => setIsEditing(false)}
-                                        className="px-6 py-3 border border-[#3b4754] rounded-lg font-bold text-white hover:bg-[#283039] transition-colors"
-                                    >
-                                        Hủy
-                                    </button>
-                                    <button className="px-6 py-3 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 transition-colors">
-                                        Lưu nháp
-                                    </button>
-                                    <button className="px-6 py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-colors">
-                                        Xuất bản
-                                    </button>
-                                </div>
+                            <div className="p-4">
+                                {loading ? (
+                                    <div className="h-96 bg-[#3e4854] animate-pulse rounded"></div>
+                                ) : selectedPolicy ? (
+                                    <textarea
+                                        value={editContent}
+                                        onChange={(e) => setEditContent(e.target.value)}
+                                        className="w-full h-96 bg-[#1a222a] border border-[#3b4754] text-white rounded-lg p-4 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                                        placeholder="Nhập nội dung chính sách (Markdown)..."
+                                    />
+                                ) : (
+                                    <div className="h-96 flex items-center justify-center text-[#9dabb9]">
+                                        Chọn một chính sách để chỉnh sửa
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
-                )}
+                </div>
             </div>
         </AdminLayout>
     );
-}
+};
+
+export default PolicyManagement;

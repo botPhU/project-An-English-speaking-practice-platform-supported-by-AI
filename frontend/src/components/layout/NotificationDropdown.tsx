@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { learnerService } from '../../services/learnerService';
 
 interface Notification {
     id: string;
@@ -10,57 +12,70 @@ interface Notification {
     avatar?: string;
 }
 
-// Mock notifications data
-const mockNotifications: Notification[] = [
-    {
-        id: '1',
-        type: 'info',
-        title: 'Mentor mới đăng ký',
-        message: 'Sarah Miller vừa gửi yêu cầu trở thành Mentor.',
-        time: '2 phút trước',
-        read: false,
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD8-Eo_MZ8WPVPA1qk3vY00TcpllNvPS2eu7M5g9xohVSZcF1i7xhIFzlu0pAzcMf3Oo13j5i4vmDwNbaqLxdKRxYZ2K92baFN_jwJeIH3tye9z-0spDpN96trJ3uU9jM_2Myzyb603haYi3DJAikts_nJZBaqWcRIxjm02oD3oa_n5wAye6cbkIWXWJC65Ssm9kvPP45mxg1uBZonLUM176mIWRl2H02A2AQ6u8YTGKCpf8Ux95xxtvpTVdM0pnnwmVLTljNb7g-4'
-    },
-    {
-        id: '2',
-        type: 'success',
-        title: 'Thanh toán thành công',
-        message: 'Gói Pro Yearly đã được mua bởi Nguyễn Văn A.',
-        time: '15 phút trước',
-        read: false
-    },
-    {
-        id: '3',
-        type: 'warning',
-        title: 'Cảnh báo hệ thống',
-        message: 'CPU Server đang ở mức 85%. Cần kiểm tra.',
-        time: '1 giờ trước',
-        read: false
-    },
-    {
-        id: '4',
-        type: 'error',
-        title: 'Báo cáo nội dung',
-        message: 'Một bình luận vi phạm đã được báo cáo.',
-        time: '3 giờ trước',
-        read: true
-    },
-    {
-        id: '5',
-        type: 'info',
-        title: 'Phản hồi mới',
-        message: 'Trần Thị B đã đánh giá 5 sao cho hệ thống.',
-        time: 'Hôm qua',
-        read: true
-    }
-];
-
 const NotificationDropdown: React.FC = () => {
+    const { user: authUser } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
-    const [notifications, setNotifications] = useState(mockNotifications);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loading, setLoading] = useState(true);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const unreadCount = notifications.filter(n => !n.read).length;
+
+    // Fetch notifications from API
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (!authUser?.id) {
+                setLoading(false);
+                return;
+            }
+            try {
+                const response = await learnerService.getNotifications(Number(authUser.id), 10);
+                // Handle various API response formats
+                let notificationData: any[] = [];
+                if (Array.isArray(response.data)) {
+                    notificationData = response.data;
+                } else if (response.data?.notifications && Array.isArray(response.data.notifications)) {
+                    notificationData = response.data.notifications;
+                } else if (response.data?.data && Array.isArray(response.data.data)) {
+                    notificationData = response.data.data;
+                }
+
+                // Map API response to Notification format
+                const mappedNotifications = notificationData.map((n: any) => ({
+                    id: String(n.id),
+                    type: n.type || 'info',
+                    title: n.title || 'Thông báo',
+                    message: n.message || n.content || '',
+                    time: n.created_at ? formatTimeAgo(n.created_at) : '',
+                    read: n.is_read || false,
+                    avatar: n.avatar_url
+                }));
+                setNotifications(mappedNotifications);
+            } catch (error) {
+                console.error('Error fetching notifications:', error);
+                setNotifications([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchNotifications();
+    }, [authUser?.id]);
+
+    // Helper to format relative time
+    const formatTimeAgo = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Vừa xong';
+        if (diffMins < 60) return `${diffMins} phút trước`;
+        if (diffHours < 24) return `${diffHours} giờ trước`;
+        if (diffDays < 7) return `${diffDays} ngày trước`;
+        return date.toLocaleDateString('vi-VN');
+    };
 
     // Close dropdown when clicking outside
     useEffect(() => {

@@ -2,6 +2,7 @@ import './index.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Auth/Login'
 import Register from './pages/Auth/Register'
+import UpdateProfile from './pages/Auth/UpdateProfile'
 import AdminDashboard from './pages/Admin/Dashboard'
 import UserManagement from './pages/Admin/UserManagement'
 import MentorManagement from './pages/Admin/MentorManagement'
@@ -20,6 +21,7 @@ import LearnerProfile from './pages/Learner/Profile'
 import TopicSelection from './pages/Learner/TopicSelection'
 import Community from './pages/Learner/Community'
 import Challenges from './pages/Learner/Challenges'
+import AIPractice from './pages/Learner/AIPractice'
 // Mentor Pages
 import MentorDashboard from './pages/Mentor/Dashboard'
 import LearnerAssessment from './pages/Mentor/LearnerAssessment'
@@ -44,6 +46,7 @@ function App() {
         {/* Auth Routes */}
         <Route path={AUTH_ROUTES.LOGIN} element={<Login />} />
         <Route path={AUTH_ROUTES.REGISTER} element={<Register />} />
+        <Route path={AUTH_ROUTES.COMPLETE_PROFILE} element={<UpdateProfile />} />
 
         {/* Admin Routes */}
         <Route path={ADMIN_ROUTES.DASHBOARD} element={<AdminDashboard />} />
@@ -60,6 +63,7 @@ function App() {
         {/* Learner Routes - Aligned with Use Case Diagram */}
         <Route path={LEARNER_ROUTES.DASHBOARD} element={<LearnerDashboard />} />
         <Route path={LEARNER_ROUTES.SPEAKING_PRACTICE} element={<TopicSelection />} />
+        <Route path={LEARNER_ROUTES.AI_PRACTICE} element={<AIPractice />} />
         <Route path={LEARNER_ROUTES.CHALLENGES} element={<Challenges />} />
         <Route path={LEARNER_ROUTES.COMMUNITY} element={<Community />} />
         <Route path={LEARNER_ROUTES.PROGRESS} element={<Progress />} />

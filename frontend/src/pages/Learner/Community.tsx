@@ -1,31 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LearnerLayout from '../../layouts/LearnerLayout';
+import { useAuth } from '../../context/AuthContext';
+import { learnerService } from '../../services/learnerService';
 
 export default function Community() {
+    const { user: authUser } = useAuth();
     const [activeTab, setActiveTab] = useState<'practice' | 'reviews' | 'mentors'>('practice');
+    const [mentors, setMentors] = useState<any[]>([]);
+    const [mentorSessions, setMentorSessions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const onlineLearners = [
-        { id: 1, name: 'Minh Hoàng', level: 'B2', avatar: 'MH', status: 'online', topic: 'Du lịch' },
-        { id: 2, name: 'Quỳnh Anh', level: 'B1', avatar: 'QA', status: 'online', topic: 'Công việc' },
-        { id: 3, name: 'Đức Anh', level: 'A2', avatar: 'DA', status: 'in-session', topic: 'Phỏng vấn' },
-        { id: 4, name: 'Thu Hà', level: 'B2', avatar: 'TH', status: 'online', topic: 'Văn hóa' },
-    ];
+    useEffect(() => {
+        if (authUser?.id) {
+            fetchData();
+        }
+    }, [authUser?.id]);
 
-    const mentors = [
-        { id: 1, name: 'Ms. Linh Đan', specialty: 'IELTS Speaking', rating: 4.9, reviews: 128, avatar: 'LD', available: true },
-        { id: 2, name: 'Mr. Hoàng Nam', specialty: 'Business English', rating: 4.8, reviews: 95, avatar: 'HN', available: true },
-        { id: 3, name: 'Ms. Mai Anh', specialty: 'Pronunciation', rating: 4.7, reviews: 72, avatar: 'MA', available: false },
-    ];
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [mentorsRes, sessionsRes] = await Promise.all([
+                learnerService.getMentors(),
+                learnerService.getMentorSessions(Number(authUser?.id))
+            ]);
+            setMentors(mentorsRes.data);
+            setMentorSessions(sessionsRes.data);
+        } catch (error) {
+            console.error('Error fetching community data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const recentSessions = [
-        { id: 1, mentor: 'Ms. Linh Đan', date: '28/12/2024', topic: 'IELTS Part 2', rating: null },
-        { id: 2, mentor: 'Mr. Hoàng Nam', date: '25/12/2024', topic: 'Business Meeting', rating: 5 },
-        { id: 3, mentor: 'Ms. Mai Anh', date: '22/12/2024', topic: 'Pronunciation', rating: 4 },
-    ];
+    // Online learners - fetched from API when available
+    const [onlineLearners, setOnlineLearners] = useState<any[]>([]);
+
+    // Note: API for online learners not yet implemented
+    // When implemented, add API call to fetch online learners
+
+    if (loading) {
+        return (
+            <LearnerLayout title="Cộng đồng">
+                <div className="flex items-center justify-center h-[400px]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+            </LearnerLayout>
+        );
+    }
 
     return (
         <LearnerLayout title="Cộng đồng">
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto space-y-8 pb-12">
                 {/* Page Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
@@ -39,8 +64,8 @@ export default function Community() {
                     <button
                         onClick={() => setActiveTab('practice')}
                         className={`px-6 py-3 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${activeTab === 'practice'
-                                ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                                : 'text-text-secondary hover:text-white hover:bg-white/5'
+                            ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                            : 'text-text-secondary hover:text-white hover:bg-white/5'
                             }`}
                     >
                         <span className="material-symbols-outlined text-lg">group</span>
@@ -49,18 +74,18 @@ export default function Community() {
                     <button
                         onClick={() => setActiveTab('reviews')}
                         className={`px-6 py-3 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${activeTab === 'reviews'
-                                ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                                : 'text-text-secondary hover:text-white hover:bg-white/5'
+                            ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                            : 'text-text-secondary hover:text-white hover:bg-white/5'
                             }`}
                     >
                         <span className="material-symbols-outlined text-lg">rate_review</span>
-                        Đánh giá
+                        Đánh giá & Lịch sử
                     </button>
                     <button
                         onClick={() => setActiveTab('mentors')}
                         className={`px-6 py-3 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${activeTab === 'mentors'
-                                ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                                : 'text-text-secondary hover:text-white hover:bg-white/5'
+                            ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                            : 'text-text-secondary hover:text-white hover:bg-white/5'
                             }`}
                     >
                         <span className="material-symbols-outlined text-lg">supervisor_account</span>
@@ -104,47 +129,55 @@ export default function Community() {
                                     <option>C1-C2</option>
                                 </select>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {onlineLearners.map((learner) => (
-                                    <div
-                                        key={learner.id}
-                                        className={`p-4 rounded-xl border transition-all ${learner.status === 'online'
+                            {onlineLearners.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {onlineLearners.map((learner) => (
+                                        <div
+                                            key={learner.id}
+                                            className={`p-4 rounded-xl border transition-all ${learner.status === 'online'
                                                 ? 'bg-white/5 border-border-dark hover:border-primary/50 cursor-pointer'
                                                 : 'bg-white/[0.02] border-border-dark/50 opacity-60'
-                                            }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="relative">
-                                                    <div className="size-12 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center font-bold text-primary">
-                                                        {learner.avatar}
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="relative">
+                                                        <div className="size-12 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center font-bold text-primary">
+                                                            {learner.avatar}
+                                                        </div>
+                                                        <span className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-surface-dark ${learner.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'
+                                                            }`}></span>
                                                     </div>
-                                                    <span className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-surface-dark ${learner.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'
-                                                        }`}></span>
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-white">{learner.name}</h4>
-                                                    <div className="flex items-center gap-2 text-xs text-text-secondary">
-                                                        <span className="bg-primary/20 text-primary px-2 py-0.5 rounded font-bold">{learner.level}</span>
-                                                        <span>•</span>
-                                                        <span>{learner.topic}</span>
+                                                    <div>
+                                                        <h4 className="font-bold text-white">{learner.name}</h4>
+                                                        <div className="flex items-center gap-2 text-xs text-text-secondary">
+                                                            <span className="bg-primary/20 text-primary px-2 py-0.5 rounded font-bold">{learner.level}</span>
+                                                            <span>•</span>
+                                                            <span>{learner.topic}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                {learner.status === 'online' ? (
+                                                    <button className="px-4 py-2 rounded-lg bg-primary/20 hover:bg-primary text-primary hover:text-white font-bold text-xs transition-all">
+                                                        Mời luyện tập
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-xs text-yellow-500 flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-sm">hourglass_empty</span>
+                                                        Đang bận
+                                                    </span>
+                                                )}
                                             </div>
-                                            {learner.status === 'online' ? (
-                                                <button className="px-4 py-2 rounded-lg bg-primary/20 hover:bg-primary text-primary hover:text-white font-bold text-xs transition-all">
-                                                    Mời luyện tập
-                                                </button>
-                                            ) : (
-                                                <span className="text-xs text-yellow-500 flex items-center gap-1">
-                                                    <span className="material-symbols-outlined text-sm">hourglass_empty</span>
-                                                    Đang bận
-                                                </span>
-                                            )}
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 border border-dashed border-border-dark rounded-xl">
+                                    <span className="material-symbols-outlined text-4xl text-text-secondary opacity-20 mb-2">group_off</span>
+                                    <p className="text-text-secondary">Chưa có học viên nào đang trực tuyến.</p>
+                                    <p className="text-xs text-text-secondary mt-2">Tính năng luyện tập cùng bạn bè đang được phát triển.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -152,58 +185,46 @@ export default function Community() {
                 {/* Reviews Tab */}
                 {activeTab === 'reviews' && (
                     <div className="space-y-6">
-                        {/* Pending Reviews */}
+                        {/* Mentor Sessions */}
                         <div className="bg-surface-dark border border-border-dark rounded-xl p-6">
                             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-orange-500">pending_actions</span>
-                                Chờ đánh giá
+                                <span className="material-symbols-outlined text-primary">calendar_month</span>
+                                Lịch học với Mentor
                             </h2>
                             <div className="space-y-4">
-                                {recentSessions.filter(s => s.rating === null).map((session) => (
-                                    <div key={session.id} className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <h4 className="font-bold text-white">{session.topic}</h4>
-                                                <p className="text-sm text-text-secondary">{session.mentor} • {session.date}</p>
-                                            </div>
-                                            <button className="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-all flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-lg">star</span>
-                                                Đánh giá ngay
+                                {mentorSessions.length > 0 ? mentorSessions.map((session) => (
+                                    <div key={session.id} className="p-4 rounded-xl bg-white/5 border border-border-dark flex items-center justify-between">
+                                        <div>
+                                            <h4 className="font-bold text-white">Buổi học với {session.mentor_name}</h4>
+                                            <p className="text-sm text-text-secondary">
+                                                {session.scheduled_at} • <span className={`font-bold ${session.is_completed ? 'text-green-500' : 'text-blue-500'}`}>
+                                                    {session.status || (session.is_completed ? 'Hoàn thành' : 'Đang chờ')}
+                                                </span>
+                                            </p>
+                                        </div>
+                                        {!session.is_completed && (
+                                            <button className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold text-sm transition-all">
+                                                Vào học
                                             </button>
-                                        </div>
+                                        )}
+                                        {session.is_completed && !session.rating && (
+                                            <button className="px-4 py-2 rounded-lg bg-orange-500/20 text-orange-500 border border-orange-500/30 hover:bg-orange-500 hover:text-white font-bold text-sm transition-all flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-lg">star</span>
+                                                Đánh giá
+                                            </button>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Completed Reviews */}
-                        <div className="bg-surface-dark border border-border-dark rounded-xl p-6">
-                            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-green-500">check_circle</span>
-                                Đã đánh giá
-                            </h2>
-                            <div className="space-y-4">
-                                {recentSessions.filter(s => s.rating !== null).map((session) => (
-                                    <div key={session.id} className="p-4 rounded-xl bg-white/5 border border-border-dark">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <h4 className="font-bold text-white">{session.topic}</h4>
-                                                <p className="text-sm text-text-secondary">{session.mentor} • {session.date}</p>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <span
-                                                        key={star}
-                                                        className={`material-symbols-outlined text-lg ${star <= (session.rating || 0) ? 'text-yellow-500' : 'text-gray-600'
-                                                            }`}
-                                                    >
-                                                        star
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
+                                )) : (
+                                    <div className="text-center py-12 border border-dashed border-border-dark rounded-xl">
+                                        <p className="text-text-secondary">Bạn chưa có buổi học nào với Mentor.</p>
+                                        <button
+                                            onClick={() => setActiveTab('mentors')}
+                                            className="mt-4 text-primary font-bold hover:underline"
+                                        >
+                                            Tìm Mentor ngay
+                                        </button>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     </div>
@@ -213,43 +234,46 @@ export default function Community() {
                 {activeTab === 'mentors' && (
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {mentors.map((mentor) => (
-                                <div key={mentor.id} className="bg-surface-dark border border-border-dark rounded-xl p-6 hover:border-primary/50 transition-all">
+                            {mentors.length > 0 ? mentors.map((mentor) => (
+                                <div key={mentor.id} className="bg-surface-dark border border-border-dark rounded-xl p-6 hover:border-primary/50 transition-all flex flex-col h-full">
                                     <div className="flex items-center gap-4 mb-4">
-                                        <div className="size-16 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center font-bold text-primary text-lg">
-                                            {mentor.avatar}
-                                        </div>
+                                        <img
+                                            src={mentor.avatar || "https://ui-avatars.com/api/?name=" + encodeURIComponent(mentor.full_name || mentor.name) + "&background=2b8cee&color=fff"}
+                                            className="size-16 rounded-full border-2 border-primary object-cover"
+                                            alt={mentor.full_name}
+                                        />
                                         <div>
-                                            <h3 className="font-bold text-white">{mentor.name}</h3>
-                                            <p className="text-sm text-primary">{mentor.specialty}</p>
+                                            <h3 className="font-bold text-white">{mentor.full_name || mentor.name}</h3>
+                                            <p className="text-sm text-primary">{mentor.specialty || 'General English'}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4 mb-4 text-sm">
-                                        <div className="flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-yellow-500 text-lg">star</span>
-                                            <span className="font-bold text-white">{mentor.rating}</span>
+                                    <div className="mb-4 flex-1">
+                                        <p className="text-text-secondary text-sm line-clamp-3 mb-4">
+                                            {mentor.bio || 'Chưa có thông tin giới thiệu.'}
+                                        </p>
+                                        <div className="flex items-center gap-4 text-sm">
+                                            <div className="flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-yellow-500 text-lg">star</span>
+                                                <span className="font-bold text-white">{mentor.rating || 5.0}</span>
+                                            </div>
+                                            <span className="text-text-secondary">({mentor.review_count || 0} đánh giá)</span>
                                         </div>
-                                        <span className="text-text-secondary">({mentor.reviews} đánh giá)</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        {mentor.available ? (
-                                            <>
-                                                <button className="flex-1 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold text-sm transition-all flex items-center justify-center gap-2">
-                                                    <span className="material-symbols-outlined text-lg">video_call</span>
-                                                    Đặt lịch
-                                                </button>
-                                                <button className="px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all">
-                                                    <span className="material-symbols-outlined text-lg">chat</span>
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <button className="flex-1 px-4 py-2.5 rounded-lg bg-white/10 text-text-secondary font-bold text-sm cursor-not-allowed">
-                                                Không khả dụng
-                                            </button>
-                                        )}
+                                    <div className="flex items-center gap-2 pt-4 border-t border-border-dark/50">
+                                        <button className="flex-1 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold text-sm transition-all flex items-center justify-center gap-2">
+                                            <span className="material-symbols-outlined text-lg">video_call</span>
+                                            Đặt lịch
+                                        </button>
+                                        <button className="px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all">
+                                            <span className="material-symbols-outlined text-lg">chat</span>
+                                        </button>
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="col-span-full py-20 text-center bg-surface-dark rounded-xl border border-dashed border-border-dark">
+                                    <p className="text-text-secondary">Hiện tại chưa có Mentor nào sẵn sàng.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
