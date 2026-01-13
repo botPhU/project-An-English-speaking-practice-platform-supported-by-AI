@@ -21,6 +21,10 @@ from api.controllers.topic_controller import topic_bp
 from api.controllers.policy_controller import policy_bp
 from api.controllers.user_profile_controller import user_profile_bp
 from api.controllers.practice_controller import practice_bp
+from api.controllers.message_controller import message_bp
+from api.controllers.assignment_controller import assignment_bp
+from api.controllers.feedback_controller import feedback_bp
+from api.controllers.video_controller import video_bp
 
 
 def register_routes(app):
@@ -46,3 +50,7 @@ def register_routes(app):
     app.register_blueprint(policy_bp)        # /api/policies/*
     app.register_blueprint(user_profile_bp)  # /api/user/profile
     app.register_blueprint(practice_bp)      # /api/practice/*
+    app.register_blueprint(message_bp)       # /api/messages/*
+    app.register_blueprint(assignment_bp)    # /api/assignments/*
+    app.register_blueprint(feedback_bp)      # /api/feedback/*
+    app.register_blueprint(video_bp)         # /api/video/*

@@ -32,6 +32,21 @@ from infrastructure.models.program_model import ProgramModel
 from infrastructure.models.survey_model import SurveyModel
 from infrastructure.models.todo_model import TodoModel
 
+# Additional models
+from infrastructure.models.admin_models import *
+from infrastructure.models.challenge_models import *
+from infrastructure.models.community_models import *
+from infrastructure.models.learner_profile_model import *
+from infrastructure.models.learning_models import *
+from infrastructure.models.mentor_assignment_model import *
+from infrastructure.models.mentor_booking_model import *
+from infrastructure.models.mentor_content_models import *
+from infrastructure.models.mentor_feedback_model import *
+from infrastructure.models.message_model import *
+from infrastructure.models.notification_model import *
+from infrastructure.models.resource_model import *
+from infrastructure.models.subscription_models import *
+
 def init_database():
     """Create all tables in the database"""
     print("=" * 50)

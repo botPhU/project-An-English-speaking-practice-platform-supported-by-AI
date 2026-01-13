@@ -24,6 +24,7 @@ class Config:
     DATABASE_URI = os.environ.get('DATABASE_URI') or 'mysql+pymysql://root:123@127.0.0.1:3306/aesp_db'
     CORS_HEADERS = 'Content-Type'
     GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or 'YOUR_GEMINI_API_KEY_HERE'
+    GEMINI_API_KEYS = [k.strip() for k in GEMINI_API_KEY.split(',') if k.strip()]
 
 class DevelopmentConfig(Config):
     """Development configuration."""

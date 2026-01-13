@@ -91,8 +91,25 @@ def handle_user_away(data):
         print(f"[WebSocket] User {user_id} is now AWAY")
 
 
+@socketio.on('check_user_online')
+def handle_check_user_online(data):
+    """Check if a specific user is online and respond"""
+    user_id = data.get('userId')
+    if user_id:
+        is_online = str(user_id) in connected_users
+        # Respond only to the requesting client
+        emit('user_status_update', {'userId': str(user_id), 'isOnline': is_online})
+        print(f"[WebSocket] Checked user {user_id} online status: {is_online}")
+
+
 def broadcast_user_status(user_id: str, status: str, last_active: str = None):
     """Broadcast user status change to all connected clients"""
+    is_online = status == 'online'
+    
+    # Emit user_status_update for frontend SocketService
+    socketio.emit('user_status_update', {'userId': str(user_id), 'isOnline': is_online})
+    
+    # Also emit legacy message format for backwards compatibility
     message = {
         'type': 'USER_STATUS_CHANGE',
         'payload': {

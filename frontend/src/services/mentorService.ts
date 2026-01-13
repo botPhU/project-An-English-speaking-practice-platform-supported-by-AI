@@ -32,4 +32,8 @@ export const mentorService = {
     // Schedule/Sessions
     getUpcomingSessions: (mentorId: number) => api.get(`/mentor/sessions/${mentorId}/upcoming`),
     getRecentFeedback: (mentorId: number) => api.get(`/mentor/feedback/${mentorId}/recent`),
+
+    // Practice Sessions (for reviewing learner recordings)
+    getPracticeSessions: (mentorId: number) => api.get(`/practice/sessions/mentor/${mentorId}`),
+    getSessionAudioUrl: (sessionId: number) => `/api/practice/sessions/${sessionId}/audio`,
 };

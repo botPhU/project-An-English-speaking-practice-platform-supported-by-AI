@@ -181,7 +181,7 @@ Let's begin! Tell me a little about yourself or ask me something about ${topic.t
                                     <p className="text-2xl mb-1">{item.icon}</p>
                                     <p className="text-[#9dabb9] text-xs mb-1">{item.label}</p>
                                     <p className="text-2xl font-bold text-primary">
-                                        {analysis[item.key] || '--'}
+                                        {analysis[item.key] !== undefined && analysis[item.key] !== null ? analysis[item.key] : '--'}
                                     </p>
                                 </div>
                             ))}
@@ -191,7 +191,7 @@ Let's begin! Tell me a little about yourself or ask me something about ${topic.t
                         <div className="bg-gradient-to-r from-primary/20 to-purple-600/20 rounded-xl p-4 mb-6 text-center">
                             <p className="text-[#9dabb9] text-sm mb-1">Điểm tổng</p>
                             <p className="text-4xl font-bold text-white">
-                                {analysis.overall_score || '--'}
+                                {analysis.overall_score !== undefined && analysis.overall_score !== null ? analysis.overall_score : '--'}
                                 <span className="text-lg text-[#9dabb9]">/100</span>
                             </p>
                         </div>

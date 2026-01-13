@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import LearnerLayout from '../../layouts/LearnerLayout';
 import { useAuth } from '../../context/AuthContext';
 import { learnerService } from '../../services/learnerService';
-import { userProfileService } from '../../services/userProfileService';
 import type { LearnerProfile } from '../../services/learnerService';
 
 interface FormData {
@@ -17,7 +16,7 @@ interface FormData {
 }
 
 export default function Profile() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, updateUser } = useAuth();
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -62,31 +61,31 @@ export default function Profile() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      // Use userProfileService to get profile from /api/user/profile (where UpdateProfile saves data)
-      const response = await userProfileService.getProfile();
-      const userData = response.data;
+      // Use learnerService.getProfile to get full profile data including LearnerProfile table
+      const response = await learnerService.getProfile(Number(authUser!.id));
+      const profileData = response.data;
 
-      // Map UserProfile to LearnerProfile format
+      // Map response to LearnerProfile format - data comes from LearnerProfileModel
       setProfile({
-        id: userData.id,
-        full_name: userData.full_name || '',
-        username: userData.user_name || '',
-        email: userData.email || '',
-        avatar: userData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.user_name || 'Guest'}`,
-        current_level: 'beginner',
-        current_streak: 0,
-        xp_points: 0,
-        target_level: 'C1',
-        progress_to_target: 0,
-        native_language: 'vi',
-        timezone: 'Asia/Ho_Chi_Minh',
-        member_since: userData.created_at ? new Date(userData.created_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }) : 'N/A',
-        learning_goals: [],
-        correction_style: 'gentle',
-        daily_goal_minutes: 30,
-        voice_calibration_date: null,
-        profile_visibility: 'public',
-        show_progress: true,
+        id: profileData.id,
+        full_name: profileData.full_name || '',
+        username: profileData.username || '',
+        email: profileData.email || '',
+        avatar: profileData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData.username || 'Guest'}`,
+        current_level: profileData.current_level || 'beginner',
+        current_streak: profileData.current_streak || 0,
+        xp_points: profileData.xp_points || 0,
+        target_level: profileData.target_level || 'C1',
+        progress_to_target: profileData.progress_to_target || 0,
+        native_language: profileData.native_language || 'vi',
+        timezone: profileData.timezone || 'Asia/Ho_Chi_Minh',
+        member_since: profileData.member_since || 'N/A',
+        learning_goals: profileData.learning_goals || [],
+        correction_style: profileData.correction_style || 'gentle',
+        daily_goal_minutes: profileData.daily_goal_minutes || 30,
+        voice_calibration_date: profileData.voice_calibration_date || null,
+        profile_visibility: profileData.profile_visibility || 'public',
+        show_progress: profileData.show_progress !== undefined ? profileData.show_progress : true,
       });
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -153,6 +152,9 @@ export default function Profile() {
       await learnerService.updatePrivacySettings(Number(authUser.id), {
         profile_visibility: formData.profile_visibility,
       });
+
+      // Update AuthContext user to sync header name/avatar
+      updateUser({ name: formData.full_name });
 
       // Refresh profile data
       await fetchProfile();

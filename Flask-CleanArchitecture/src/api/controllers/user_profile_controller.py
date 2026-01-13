@@ -8,7 +8,7 @@ from datetime import datetime
 
 from services.auth_service import AuthService
 from infrastructure.models.user_model import UserModel
-from infrastructure.databases.mssql import session
+from infrastructure.databases.mssql import get_db_session_context
 
 user_profile_bp = Blueprint('user_profile', __name__, url_prefix='/api/user')
 
@@ -56,28 +56,29 @@ def get_profile():
     if not user_id:
         return jsonify({'error': 'Missing or invalid authorization token'}), 401
     
-    user = session.query(UserModel).filter_by(id=user_id).first()
-    
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    return jsonify({
-        'id': user.id,
-        'user_name': user.user_name,
-        'email': user.email,
-        'full_name': user.full_name,
-        'role': user.role,
-        'phone_number': user.phone_number,
-        'date_of_birth': user.date_of_birth.isoformat() if user.date_of_birth else None,
-        'gender': user.gender,
-        'address': user.address,
-        'city': user.city,
-        'country': user.country,
-        'avatar_url': user.avatar_url,
-        'bio': user.bio,
-        'profile_completed': user.profile_completed,
-        'created_at': user.created_at.isoformat() if user.created_at else None
-    }), 200
+    with get_db_session_context() as session:
+        user = session.query(UserModel).filter_by(id=user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        return jsonify({
+            'id': user.id,
+            'user_name': user.user_name,
+            'email': user.email,
+            'full_name': user.full_name,
+            'role': user.role,
+            'phone_number': user.phone_number,
+            'date_of_birth': user.date_of_birth.isoformat() if user.date_of_birth else None,
+            'gender': user.gender,
+            'address': user.address,
+            'city': user.city,
+            'country': user.country,
+            'avatar_url': user.avatar_url,
+            'bio': user.bio,
+            'profile_completed': user.profile_completed,
+            'created_at': user.created_at.isoformat() if user.created_at else None
+        }), 200
 
 
 @user_profile_bp.route('/profile', methods=['PUT'])
@@ -179,50 +180,50 @@ def update_profile():
         return sanitized[:max_length] if sanitized else None
     
     try:
-        user = session.query(UserModel).filter_by(id=user_id).first()
-        
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        # Update user profile fields
-        user.full_name = sanitize_string(data.get('full_name'), 100)
-        user.phone_number = sanitize_string(data.get('phone_number'), 20)
-        user.date_of_birth = dob
-        user.gender = sanitize_string(data.get('gender'), 10)
-        user.address = sanitize_string(data.get('address'), 255)
-        user.city = sanitize_string(data.get('city'), 100)
-        user.country = sanitize_string(data.get('country'), 100)
-        user.avatar_url = sanitize_string(data.get('avatar_url'), 500)
-        user.bio = sanitize_string(data.get('bio'), 1000)
-        
-        # Mark profile as completed
-        user.profile_completed = True
-        user.updated_at = datetime.now()
-        
-        session.commit()
-        
-        return jsonify({
-            'message': 'Profile updated successfully',
-            'profile_completed': True,
-            'user': {
-                'id': user.id,
-                'user_name': user.user_name,
-                'email': user.email,
-                'full_name': user.full_name,
-                'phone_number': user.phone_number,
-                'date_of_birth': user.date_of_birth.isoformat() if user.date_of_birth else None,
-                'gender': user.gender,
-                'address': user.address,
-                'city': user.city,
-                'country': user.country,
-                'avatar_url': user.avatar_url,
-                'bio': user.bio,
-                'profile_completed': user.profile_completed
-            }
-        }), 200
+        with get_db_session_context() as session:
+            user = session.query(UserModel).filter_by(id=user_id).first()
+            
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Update user profile fields
+            user.full_name = sanitize_string(data.get('full_name'), 100)
+            user.phone_number = sanitize_string(data.get('phone_number'), 20)
+            user.date_of_birth = dob
+            user.gender = sanitize_string(data.get('gender'), 10)
+            user.address = sanitize_string(data.get('address'), 255)
+            user.city = sanitize_string(data.get('city'), 100)
+            user.country = sanitize_string(data.get('country'), 100)
+            user.avatar_url = sanitize_string(data.get('avatar_url'), 500)
+            user.bio = sanitize_string(data.get('bio'), 1000)
+            
+            # Mark profile as completed
+            user.profile_completed = True
+            user.updated_at = datetime.now()
+            
+            # Session will allow changes to be committed by context manager
+            
+            return jsonify({
+                'message': 'Profile updated successfully',
+                'profile_completed': True,
+                'user': {
+                    'id': user.id,
+                    'user_name': user.user_name,
+                    'email': user.email,
+                    'full_name': user.full_name,
+                    'phone_number': user.phone_number,
+                    'date_of_birth': user.date_of_birth.isoformat() if user.date_of_birth else None,
+                    'gender': user.gender,
+                    'address': user.address,
+                    'city': user.city,
+                    'country': user.country,
+                    'avatar_url': user.avatar_url,
+                    'bio': user.bio,
+                    'profile_completed': user.profile_completed
+                }
+            }), 200
         
     except Exception as e:
-        session.rollback()
         return jsonify({'error': f'Failed to update profile: {str(e)}'}), 500
 
 

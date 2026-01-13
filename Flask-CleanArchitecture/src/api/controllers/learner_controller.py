@@ -355,3 +355,131 @@ def update_privacy_settings(user_id):
     result = learner_service.update_privacy_settings(user_id, data)
     return jsonify({'message': 'Privacy settings updated'}), 200
 
+
+# ==================== MESSAGING ====================
+@learner_bp.route('/messages/<int:user_id>', methods=['GET'])
+@swag_from({
+    'tags': ['Learner'],
+    'summary': 'Get messages for a user',
+    'parameters': [{'name': 'user_id', 'in': 'path', 'type': 'integer', 'required': True}],
+    'responses': {'200': {'description': 'List of messages'}}
+})
+def get_messages(user_id):
+    """Get all messages for a user"""
+    other_user_id = request.args.get('with_user', type=int)
+    messages = learner_service.get_messages(user_id, other_user_id)
+    return jsonify(messages), 200
+
+
+@learner_bp.route('/messages', methods=['POST'])
+@swag_from({
+    'tags': ['Learner'],
+    'summary': 'Send a message',
+    'responses': {'201': {'description': 'Message sent'}}
+})
+def send_message():
+    """Send a message to another user"""
+    data = request.get_json()
+    sender_id = data.get('sender_id')
+    receiver_id = data.get('receiver_id')
+    content = data.get('content')
+    
+    message = learner_service.send_message(sender_id, receiver_id, content)
+    
+    # Send real-time notification via WebSocket
+    from api.websocket import socketio, connected_users
+    if str(receiver_id) in connected_users:
+        socketio.emit('new_message', {
+            'type': 'NEW_MESSAGE',
+            'message': message
+        }, room=connected_users[str(receiver_id)].get('sid'))
+    
+    return jsonify({'message_id': message['id'], 'status': 'sent'}), 201
+
+
+@learner_bp.route('/messages/<int:message_id>/read', methods=['PUT'])
+@swag_from({
+    'tags': ['Learner'],
+    'summary': 'Mark message as read',
+    'responses': {'200': {'description': 'Message marked as read'}}
+})
+def mark_message_read(message_id):
+    """Mark a message as read"""
+    learner_service.mark_message_read(message_id)
+    return jsonify({'message': 'Message marked as read'}), 200
+
+
+@learner_bp.route('/conversations/<int:user_id>', methods=['GET'])
+@swag_from({
+    'tags': ['Learner'],
+    'summary': 'Get conversation list',
+    'responses': {'200': {'description': 'List of conversations'}}
+})
+def get_conversations(user_id):
+    """Get list of conversations for a user"""
+    conversations = learner_service.get_conversations(user_id)
+    return jsonify(conversations), 200
+
+
+# ==================== ENHANCED BOOKING ====================
+@learner_bp.route('/booking', methods=['POST'])
+@swag_from({
+    'tags': ['Learner'],
+    'summary': 'Create a booking',
+    'responses': {'201': {'description': 'Booking created'}}
+})
+def create_booking():
+    """Create a mentor booking"""
+    data = request.get_json()
+    booking = learner_service.create_booking(data)
+    
+    # Send real-time notification to mentor via WebSocket
+    from api.websocket import socketio, connected_users
+    from services.notification_service import NotificationService
+    
+    mentor_id = data.get('mentor_id')
+    learner_id = data.get('learner_id')
+    
+    # Create notification in database
+    NotificationService.create_notification(
+        user_id=mentor_id,
+        title="📅 Yêu cầu đặt lịch mới",
+        message=f"Học viên đã đặt lịch học vào {data.get('scheduled_date')} lúc {data.get('scheduled_time')}",
+        notification_type="booking",
+        action_url="/mentor/dashboard"
+    )
+    
+    # Send real-time if mentor is online
+    if str(mentor_id) in connected_users:
+        socketio.emit('new_booking', {
+            'type': 'NEW_BOOKING',
+            'booking': booking
+        }, room=connected_users[str(mentor_id)].get('sid'))
+    
+    return jsonify(booking), 201
+
+
+@learner_bp.route('/booking/<int:booking_id>', methods=['PUT'])
+@swag_from({
+    'tags': ['Learner'],
+    'summary': 'Update booking status',
+    'responses': {'200': {'description': 'Booking updated'}}
+})
+def update_booking(booking_id):
+    """Update a booking status"""
+    data = request.get_json()
+    booking = learner_service.update_booking(booking_id, data)
+    return jsonify(booking), 200
+
+
+@learner_bp.route('/bookings/<int:user_id>', methods=['GET'])
+@swag_from({
+    'tags': ['Learner'],
+    'summary': 'Get user bookings',
+    'responses': {'200': {'description': 'List of bookings'}}
+})
+def get_bookings(user_id):
+    """Get all bookings for a user"""
+    role = request.args.get('role', 'learner')  # learner or mentor
+    bookings = learner_service.get_bookings(user_id, role)
+    return jsonify(bookings), 200

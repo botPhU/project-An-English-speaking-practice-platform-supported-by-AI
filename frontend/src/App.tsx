@@ -21,9 +21,10 @@ import LearnerProfile from './pages/Learner/Profile'
 import TopicSelection from './pages/Learner/TopicSelection'
 import Community from './pages/Learner/Community'
 import Challenges from './pages/Learner/Challenges'
-import AIPractice from './pages/Learner/AIPractice'
+import AIPractice from './pages/Learner/AIPracticeImmersive'
 // Mentor Pages
 import MentorDashboard from './pages/Mentor/Dashboard'
+import MentorMessages from './pages/Mentor/MentorMessages'
 import LearnerAssessment from './pages/Mentor/LearnerAssessment'
 import Resources from './pages/Mentor/Resources'
 import FeedbackSession from './pages/Mentor/FeedbackSession'
@@ -62,7 +63,7 @@ function App() {
 
         {/* Learner Routes - Aligned with Use Case Diagram */}
         <Route path={LEARNER_ROUTES.DASHBOARD} element={<LearnerDashboard />} />
-        <Route path={LEARNER_ROUTES.SPEAKING_PRACTICE} element={<TopicSelection />} />
+        <Route path={LEARNER_ROUTES.SPEAKING_PRACTICE} element={<AIPractice />} />
         <Route path={LEARNER_ROUTES.AI_PRACTICE} element={<AIPractice />} />
         <Route path={LEARNER_ROUTES.CHALLENGES} element={<Challenges />} />
         <Route path={LEARNER_ROUTES.COMMUNITY} element={<Community />} />
@@ -72,6 +73,8 @@ function App() {
 
         {/* Mentor Routes */}
         <Route path={MENTOR_ROUTES.DASHBOARD} element={<MentorDashboard />} />
+        <Route path="/mentor/dashboard" element={<MentorDashboard />} />
+        <Route path="/mentor/messages" element={<MentorMessages />} />
         <Route path={MENTOR_ROUTES.LEARNER_ASSESSMENT} element={<LearnerAssessment />} />
         <Route path={MENTOR_ROUTES.RESOURCES} element={<Resources />} />
         <Route path={MENTOR_ROUTES.FEEDBACK_SESSION} element={<FeedbackSession />} />

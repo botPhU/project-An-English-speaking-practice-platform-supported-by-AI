@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import MentorLayout from '../../layouts/MentorLayout';
 import { mentorService } from '../../services/mentorService';
+import { useAuth } from '../../context/AuthContext';
 
 interface MentorProfile {
     id: number;
@@ -23,10 +24,11 @@ interface MentorProfile {
 }
 
 export default function MentorProfile() {
+    const { user: authUser } = useAuth();
     const [profile, setProfile] = useState<MentorProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [, setError] = useState<string | null>(null);
 
     // Form state
     const [firstName, setFirstName] = useState('');
@@ -35,12 +37,14 @@ export default function MentorProfile() {
     const [phone, setPhone] = useState('');
     const [bio, setBio] = useState('');
 
-    // TODO: Get mentor ID from auth context
-    const mentorId = 1;
+    // Get mentor ID from auth context
+    const mentorId = Number(authUser?.id) || 0;
 
     useEffect(() => {
-        fetchProfile();
-    }, []);
+        if (mentorId > 0) {
+            fetchProfile();
+        }
+    }, [mentorId]);
 
     const fetchProfile = async () => {
         try {

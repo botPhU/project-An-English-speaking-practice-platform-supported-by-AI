@@ -245,3 +245,92 @@ class NotificationService:
             notification_type="feedback",
             action_url="/learner/feedback"
         )
+
+    @staticmethod
+    def notify_mentor_practice_started(mentor_id: int, learner_name: str, topic: str, session_id: int):
+        """Notify mentor when their assigned learner starts a practice session"""
+        return NotificationService.create_notification(
+            user_id=mentor_id,
+            title="🎙️ Học viên bắt đầu luyện tập",
+            message=f"{learner_name} đã bắt đầu phiên luyện tập chủ đề '{topic}'. Bạn có thể xem và đánh giá sau khi hoàn thành.",
+            notification_type="session",
+            action_url=f"/mentor/feedback"
+        )
+    
+    @staticmethod
+    def notify_mentor_session_completed(mentor_id: int, learner_name: str, session_id: int, overall_score: float = None):
+        """Notify mentor when their learner completes a practice session"""
+        score_text = f" với điểm {overall_score:.0f}/100" if overall_score else ""
+        return NotificationService.create_notification(
+            user_id=mentor_id,
+            title="✅ Học viên hoàn thành luyện tập",
+            message=f"{learner_name} đã hoàn thành phiên luyện tập{score_text}. Bạn có thể nghe ghi âm và cho phản hồi.",
+            notification_type="session",
+            action_url=f"/mentor/feedback"
+        )
+
+    @staticmethod
+    def send_broadcast(admin_id: int, target_role: str, title: str, message: str) -> int:
+        """
+        Send broadcast notification to all users of a specific role
+        
+        Args:
+            admin_id: Admin who sends the broadcast
+            target_role: 'all', 'learner', or 'mentor'
+            title: Notification title
+            message: Notification message
+            
+        Returns:
+            Number of notifications sent
+        """
+        from infrastructure.models.user_model import UserModel
+        
+        query = session.query(UserModel.id)
+        if target_role != 'all':
+            query = query.filter(UserModel.role == target_role)
+        
+        user_ids = [u.id for u in query.all()]
+        
+        if not user_ids:
+            return 0
+        
+        return NotificationService.send_bulk_notification(
+            user_ids=user_ids,
+            title=title,
+            message=message,
+            notification_type='announcement'
+        )
+
+    @staticmethod
+    def notify_video_call_invite(user_id: int, caller_name: str, room_name: str):
+        """Notify user about incoming video call"""
+        return NotificationService.create_notification(
+            user_id=user_id,
+            title="📹 Cuộc gọi video đến",
+            message=f"{caller_name} đang gọi cho bạn.",
+            notification_type="call",
+            action_url=f"/video/{room_name}"
+        )
+
+    @staticmethod
+    def notify_assignment(learner_id: int, mentor_name: str):
+        """Notify learner about new mentor assignment"""
+        return NotificationService.create_notification(
+            user_id=learner_id,
+            title="🎓 Bạn có mentor mới!",
+            message=f"{mentor_name} đã được gán làm mentor của bạn.",
+            notification_type="assignment",
+            action_url="/learner/community"
+        )
+
+    @staticmethod
+    def notify_mentor_new_learner(mentor_id: int, learner_name: str):
+        """Notify mentor about new learner assignment"""
+        return NotificationService.create_notification(
+            user_id=mentor_id,
+            title="👨‍🎓 Học viên mới!",
+            message=f"{learner_name} đã được gán cho bạn hướng dẫn.",
+            notification_type="assignment",
+            action_url="/mentor/dashboard"
+        )
+

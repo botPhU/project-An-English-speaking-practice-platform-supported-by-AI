@@ -628,4 +628,216 @@ class LearnerService:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
+    # ==================== MESSAGING ====================
+    def send_message(self, sender_id: int, receiver_id: int, content: str):
+        """Send a message to another user"""
+        try:
+            with get_db_session() as session:
+                from infrastructure.models.message_model import MessageModel
+                
+                message = MessageModel(
+                    sender_id=sender_id,
+                    receiver_id=receiver_id,
+                    content=content,
+                    is_read=False,
+                    created_at=datetime.now()
+                )
+                session.add(message)
+                session.flush()
+                
+                # Get sender name
+                sender = session.query(UserModel).get(sender_id)
+                
+                return {
+                    'id': message.id,
+                    'sender_id': sender_id,
+                    'receiver_id': receiver_id,
+                    'sender_name': sender.full_name if sender else 'Unknown',
+                    'content': content,
+                    'is_read': False,
+                    'created_at': message.created_at.isoformat()
+                }
+        except Exception as e:
+            print(f"Send message error: {e}")
+            return {'error': str(e)}
+    
+    def get_messages(self, user_id: int, other_user_id: int = None):
+        """Get messages for a user, optionally with specific user"""
+        try:
+            with get_db_session() as session:
+                from infrastructure.models.message_model import MessageModel
+                from sqlalchemy import or_, and_
+                
+                query = session.query(MessageModel)
+                
+                if other_user_id:
+                    # Get conversation between two users
+                    query = query.filter(
+                        or_(
+                            and_(MessageModel.sender_id == user_id, MessageModel.receiver_id == other_user_id),
+                            and_(MessageModel.sender_id == other_user_id, MessageModel.receiver_id == user_id)
+                        )
+                    )
+                else:
+                    # Get all messages for user
+                    query = query.filter(
+                        or_(MessageModel.sender_id == user_id, MessageModel.receiver_id == user_id)
+                    )
+                
+                messages = query.order_by(MessageModel.created_at.asc()).all()
+                
+                return [m.to_dict() for m in messages]
+        except Exception as e:
+            print(f"Get messages error: {e}")
+            return []
+    
+    def mark_message_read(self, message_id: int):
+        """Mark a message as read"""
+        try:
+            with get_db_session() as session:
+                from infrastructure.models.message_model import MessageModel
+                message = session.query(MessageModel).get(message_id)
+                if message:
+                    message.is_read = True
+                    message.read_at = datetime.now()
+                return {'success': True}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def get_conversations(self, user_id: int):
+        """Get list of conversations for a user"""
+        try:
+            with get_db_session() as session:
+                from infrastructure.models.message_model import MessageModel
+                from sqlalchemy import or_, func, distinct
+                
+                # Get unique users this person has messaged with
+                subq = session.query(
+                    func.case(
+                        (MessageModel.sender_id == user_id, MessageModel.receiver_id),
+                        else_=MessageModel.sender_id
+                    ).label('other_user_id')
+                ).filter(
+                    or_(MessageModel.sender_id == user_id, MessageModel.receiver_id == user_id)
+                ).distinct().subquery()
+                
+                other_ids = session.query(subq.c.other_user_id).all()
+                
+                conversations = []
+                for (other_id,) in other_ids:
+                    other_user = session.query(UserModel).get(other_id)
+                    
+                    # Get last message
+                    last_message = session.query(MessageModel).filter(
+                        or_(
+                            and_(MessageModel.sender_id == user_id, MessageModel.receiver_id == other_id),
+                            and_(MessageModel.sender_id == other_id, MessageModel.receiver_id == user_id)
+                        )
+                    ).order_by(MessageModel.created_at.desc()).first()
+                    
+                    # Count unread
+                    unread_count = session.query(MessageModel).filter(
+                        MessageModel.sender_id == other_id,
+                        MessageModel.receiver_id == user_id,
+                        MessageModel.is_read == False
+                    ).count()
+                    
+                    if other_user:
+                        conversations.append({
+                            'user_id': other_id,
+                            'user_name': other_user.full_name or other_user.user_name,
+                            'avatar': f'https://api.dicebear.com/7.x/avataaars/svg?seed={other_user.user_name}',
+                            'last_message': last_message.content[:50] if last_message else '',
+                            'last_message_time': last_message.created_at.isoformat() if last_message else None,
+                            'unread_count': unread_count
+                        })
+                
+                return sorted(conversations, key=lambda x: x.get('last_message_time') or '', reverse=True)
+        except Exception as e:
+            print(f"Get conversations error: {e}")
+            return []
 
+    # ==================== ENHANCED BOOKING ====================
+    def create_booking(self, data: dict):
+        """Create a new mentor booking"""
+        try:
+            with get_db_session() as session:
+                from infrastructure.models.mentor_booking_model import MentorBookingModel
+                from datetime import date, time
+                
+                # Parse date and time
+                scheduled_date = datetime.strptime(data.get('scheduled_date'), '%Y-%m-%d').date()
+                scheduled_time = datetime.strptime(data.get('scheduled_time'), '%H:%M').time()
+                
+                booking = MentorBookingModel(
+                    learner_id=data.get('learner_id'),
+                    mentor_id=data.get('mentor_id'),
+                    scheduled_date=scheduled_date,
+                    scheduled_time=scheduled_time,
+                    duration_minutes=data.get('duration_minutes', 30),
+                    topic=data.get('topic'),
+                    notes=data.get('notes'),
+                    status='pending',
+                    created_at=datetime.now()
+                )
+                session.add(booking)
+                session.flush()
+                
+                # Get mentor name
+                mentor = session.query(UserModel).get(data.get('mentor_id'))
+                learner = session.query(UserModel).get(data.get('learner_id'))
+                
+                return {
+                    'id': booking.id,
+                    'learner_id': booking.learner_id,
+                    'mentor_id': booking.mentor_id,
+                    'learner_name': learner.full_name if learner else None,
+                    'mentor_name': mentor.full_name if mentor else None,
+                    'scheduled_date': str(scheduled_date),
+                    'scheduled_time': str(scheduled_time),
+                    'topic': booking.topic,
+                    'status': booking.status
+                }
+        except Exception as e:
+            print(f"Create booking error: {e}")
+            return {'error': str(e)}
+    
+    def update_booking(self, booking_id: int, data: dict):
+        """Update a booking status"""
+        try:
+            with get_db_session() as session:
+                from infrastructure.models.mentor_booking_model import MentorBookingModel
+                
+                booking = session.query(MentorBookingModel).get(booking_id)
+                if not booking:
+                    return {'error': 'Booking not found'}
+                
+                if 'status' in data:
+                    booking.status = data['status']
+                    if data['status'] == 'confirmed':
+                        booking.confirmed_at = datetime.now()
+                    elif data['status'] == 'completed':
+                        booking.completed_at = datetime.now()
+                
+                booking.updated_at = datetime.now()
+                
+                return booking.to_dict()
+        except Exception as e:
+            print(f"Update booking error: {e}")
+            return {'error': str(e)}
+    
+    def get_bookings(self, user_id: int, role: str = 'learner'):
+        """Get all bookings for a user"""
+        try:
+            with get_db_session() as session:
+                from infrastructure.models.mentor_booking_model import MentorBookingModel
+                
+                if role == 'mentor':
+                    bookings = session.query(MentorBookingModel).filter_by(mentor_id=user_id).all()
+                else:
+                    bookings = session.query(MentorBookingModel).filter_by(learner_id=user_id).all()
+                
+                return [b.to_dict() for b in bookings]
+        except Exception as e:
+            print(f"Get bookings error: {e}")
+            return []

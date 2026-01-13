@@ -162,5 +162,34 @@ export const learnerService = {
 
     purchasePackage: (userId: number, packageId: number, paymentMethod?: string) =>
         api.post('/purchase/buy', { user_id: userId, package_id: packageId, payment_method: paymentMethod }),
-};
 
+    // Messaging
+    getMessages: (userId: number, otherUserId?: number) =>
+        api.get(`/learner/messages/${userId}`, { params: otherUserId ? { with_user: otherUserId } : {} }),
+
+    sendMessage: (data: { sender_id: number; receiver_id: number; content: string }) =>
+        api.post('/learner/messages', data),
+
+    markMessageRead: (messageId: number) =>
+        api.put(`/learner/messages/${messageId}/read`),
+
+    getConversations: (userId: number) =>
+        api.get(`/learner/conversations/${userId}`),
+
+    // Enhanced Booking
+    createBooking: (data: {
+        learner_id: number;
+        mentor_id: number;
+        scheduled_date: string;
+        scheduled_time: string;
+        topic?: string;
+        notes?: string;
+        duration_minutes?: number;
+    }) => api.post('/learner/booking', data),
+
+    getBookings: (userId: number, role = 'learner') =>
+        api.get(`/learner/bookings/${userId}`, { params: { role } }),
+
+    updateBooking: (bookingId: number, data: { status: string }) =>
+        api.put(`/learner/booking/${bookingId}`, data),
+};

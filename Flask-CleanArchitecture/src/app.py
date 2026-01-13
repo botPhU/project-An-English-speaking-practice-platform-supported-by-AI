@@ -36,6 +36,11 @@ from api.controllers.challenge_controller import challenge_bp
 from api.controllers.subscription_controller import subscription_bp
 from api.controllers.user_profile_controller import user_profile_bp
 from api.controllers.practice_controller import practice_bp
+from api.controllers.message_controller import message_bp
+from api.controllers.assignment_controller import assignment_bp
+from api.controllers.feedback_controller import feedback_bp
+from api.controllers.video_controller import video_bp
+from api.controllers.study_buddy_controller import study_buddy_bp
 
 
 def create_app():
@@ -45,7 +50,12 @@ def create_app():
     app.config.from_object(Config)
     
     # Enable CORS for frontend
-    CORS(app, origins=["http://localhost:5173", "http://localhost:3000"], supports_credentials=True)
+    CORS(app, origins=[
+        "http://localhost:5173", 
+        "http://localhost:3000",
+        "https://aesp-frontend.nport.link",
+        "https://aesp-platform-2026.nport.link"
+    ], supports_credentials=True)
     
     Swagger(app)
     
@@ -69,6 +79,13 @@ def create_app():
     app.register_blueprint(subscription_bp)
     app.register_blueprint(user_profile_bp)
     app.register_blueprint(practice_bp)
+    
+    # Role connection controllers
+    app.register_blueprint(message_bp)
+    app.register_blueprint(assignment_bp)
+    app.register_blueprint(feedback_bp)
+    app.register_blueprint(video_bp)
+    app.register_blueprint(study_buddy_bp)
 
     # Swagger UI blueprint
     SWAGGER_URL = '/docs'

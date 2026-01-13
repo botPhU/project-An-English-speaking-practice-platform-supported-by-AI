@@ -16,6 +16,7 @@ class UserModel(Base):
     status = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+    last_login = Column(DateTime, nullable=True)
     
     # Extended Profile Fields
     phone_number = Column(String(20), nullable=True)

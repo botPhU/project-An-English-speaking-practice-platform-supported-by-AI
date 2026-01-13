@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import LearnerLayout from '../../layouts/LearnerLayout';
 import { useAuth } from '../../context/AuthContext';
 import { learnerService } from '../../services/learnerService';
+import MyMentorCard from '../../components/MyMentorCard';
 
 export default function Dashboard() {
     const { user: authUser } = useAuth();
@@ -237,17 +238,8 @@ export default function Dashboard() {
                             </div>
                         </section>
 
-                        <section className="bg-surface-dark rounded-3xl border border-border-dark p-6">
-                            <h4 className="font-black flex items-center gap-3 uppercase tracking-widest text-xs mb-8">
-                                <span className="material-symbols-outlined text-primary">leaderboard</span>
-                                Bảng Xếp Hạng
-                            </h4>
-                            <div className="space-y-6">
-                                <div className="text-center py-6 text-text-secondary text-sm">
-                                    <p>Bảng xếp hạng sẽ sớm xuất hiện khi có thêm nhiều người học tham gia!</p>
-                                </div>
-                            </div>
-                        </section>
+                        {/* My Mentor Card */}
+                        <MyMentorCard learnerId={Number(authUser?.id) || 0} />
                     </div>
                 </div>
             </div>

@@ -11,6 +11,43 @@ practice_bp = Blueprint('practice', __name__, url_prefix='/api/practice')
 practice_service = PracticeSessionService()
 
 
+@practice_bp.route('/vocabulary/<topic>', methods=['GET'])
+def get_vocabulary(topic):
+    """Get vocabulary suggestions for a topic before starting practice"""
+    try:
+        ai_service = AIService()
+        vocabulary = ai_service.get_vocabulary_suggestions(topic)
+        
+        if not vocabulary:
+            # Fallback to AI-generated vocabulary if database empty
+            if ai_service.model:
+                prompt = f"""Generate vocabulary for "{topic}" topic in JSON format:
+{{
+  "basic": [3 A1-A2 words with word, ipa, vietnamese, example, cefr],
+  "intermediate": [3 B1-B2 words],
+  "advanced": [2 C1-C2 words],
+  "idioms": [2 idioms with phrase, meaning, example],
+  "collocations": [2 collocations with phrase, vietnamese, example]
+}}"""
+                try:
+                    response = ai_service.model.generate_content(prompt)
+                    import json
+                    import re
+                    json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+                    if json_match:
+                        vocabulary = json.loads(json_match.group())
+                except Exception:
+                    pass
+        
+        return jsonify({
+            "topic": topic,
+            "vocabulary": vocabulary,
+            "message": "Use these words in your practice!"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "vocabulary": {}}), 500
+
+
 @practice_bp.route('/start', methods=['POST'])
 def start_session():
     """Start a new AI practice session"""
@@ -121,3 +158,75 @@ def quick_feedback():
         return jsonify(quick_result)
     except Exception as e:
         return jsonify({"error": str(e), "score": 0}), 500
+
+
+@practice_bp.route('/upload-audio', methods=['POST'])
+def upload_audio():
+    """
+    Upload audio recording for a practice session
+    This allows mentors to later listen to the learner's recordings
+    """
+    try:
+        session_id = request.form.get('session_id')
+        audio_file = request.files.get('audio')
+        
+        if not session_id or not audio_file:
+            return jsonify({"error": "session_id and audio file are required"}), 400
+        
+        # Read audio data
+        audio_data = audio_file.read()
+        
+        # Save to database
+        result = practice_service.save_audio_recording(
+            int(session_id), 
+            audio_data, 
+            audio_file.filename or 'recording.webm'
+        )
+        
+        return jsonify({
+            "success": True,
+            "message": "Audio uploaded successfully",
+            "session_id": session_id
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@practice_bp.route('/sessions/<int:session_id>/audio', methods=['GET'])
+def get_session_audio(session_id):
+    """
+    Get audio recording for a session (for mentor review)
+    """
+    from flask import Response
+    
+    try:
+        audio_data = practice_service.get_audio_recording(session_id)
+        
+        if not audio_data:
+            return jsonify({"error": "No audio recording found"}), 404
+        
+        return Response(
+            audio_data,
+            mimetype='audio/webm',
+            headers={'Content-Disposition': f'inline; filename=session_{session_id}.webm'}
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@practice_bp.route('/sessions/mentor/<int:mentor_id>', methods=['GET'])
+def get_mentor_sessions(mentor_id):
+    """
+    Get all practice sessions for mentors to review
+    Returns sessions with learner info, topic, scores, and audio availability
+    """
+    try:
+        sessions = practice_service.get_sessions_for_mentor(mentor_id)
+        
+        return jsonify({
+            "sessions": sessions,
+            "total": len(sessions)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "sessions": []}), 500
+

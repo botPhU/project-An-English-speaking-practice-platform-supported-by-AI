@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, Text, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, Text, Boolean, LargeBinary
 from sqlalchemy.orm import relationship
 from infrastructure.databases.base import Base
 
@@ -41,6 +41,10 @@ class PracticeSessionModel(Base):
     started_at = Column(DateTime)
     ended_at = Column(DateTime)
     created_at = Column(DateTime)
+    
+    # Audio recording storage (for mentor review)
+    audio_recording = Column(LargeBinary, nullable=True)  # Audio blob
+    audio_filename = Column(String(255), nullable=True)   # Original filename
 
     # Relationships
     user = relationship("UserModel", foreign_keys=[user_id], back_populates="practice_sessions")

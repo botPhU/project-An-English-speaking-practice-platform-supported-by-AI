@@ -24,7 +24,9 @@ from infrastructure.models.admin_models import (
     SupportTicketModel, TicketMessageModel, ActivityLogModel,
     SystemSettingModel, MentorApplicationModel
 )
-
+# NEW: Import booking and messaging models
+from infrastructure.models.mentor_booking_model import MentorBookingModel as NewMentorBookingModel
+from infrastructure.models.message_model import MessageModel
 
 def create_all_tables():
     """Create all tables in the database"""

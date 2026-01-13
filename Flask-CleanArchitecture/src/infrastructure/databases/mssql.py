@@ -15,11 +15,11 @@ def init_mssql(app):
 
 
 @contextmanager
-def get_db_session():
+def get_db_session_context():
     """
     Context manager để quản lý database session đúng cách.
     Usage:
-        with get_db_session() as session:
+        with get_db_session_context() as session:
             user = session.query(UserModel).first()
     """
     db_session = SessionLocal()
@@ -31,3 +31,11 @@ def get_db_session():
         raise
     finally:
         db_session.close()
+
+
+def get_db_session():
+    """
+    Tạo mới session để dùng trong services.
+    Lưu ý: Cần gọi session.close() sau khi dùng xong.
+    """
+    return SessionLocal()

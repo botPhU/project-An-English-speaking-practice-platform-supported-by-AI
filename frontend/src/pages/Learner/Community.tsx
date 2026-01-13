@@ -1,20 +1,55 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import LearnerLayout from '../../layouts/LearnerLayout';
 import { useAuth } from '../../context/AuthContext';
 import { learnerService } from '../../services/learnerService';
+import BookingModal from '../../components/BookingModal';
+import ChatModal from '../../components/ChatModal';
 
 export default function Community() {
     const { user: authUser } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<'practice' | 'reviews' | 'mentors'>('practice');
     const [mentors, setMentors] = useState<any[]>([]);
     const [mentorSessions, setMentorSessions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showBookingModal, setShowBookingModal] = useState(false);
+    const [showChatModal, setShowChatModal] = useState(false);
+    const [selectedMentor, setSelectedMentor] = useState<any>(null);
+
 
     useEffect(() => {
         if (authUser?.id) {
             fetchData();
         }
     }, [authUser?.id]);
+
+    // Handle URL query param for chat modal
+    useEffect(() => {
+        const chatMentorId = searchParams.get('chat');
+        if (chatMentorId && chatMentorId !== 'undefined') {
+            // First try to find in mentors list
+            let mentor = mentors.find(m => m.id === Number(chatMentorId));
+
+            // If not found in mentors list, create a basic mentor object to open chat
+            // Don't wait for loading - open chat immediately
+            if (!mentor) {
+                // This handles the case when navigating from MyMentorCard
+                // We'll use the mentor ID directly for the chat
+                mentor = {
+                    id: Number(chatMentorId),
+                    full_name: 'Mentor',
+                    name: 'Mentor'
+                };
+            }
+
+            setSelectedMentor(mentor);
+            setShowChatModal(true);
+            setActiveTab('mentors');
+            // Clear the query param
+            setSearchParams({}, { replace: true });
+        }
+    }, [searchParams]);
 
     const fetchData = async () => {
         try {
@@ -44,6 +79,16 @@ export default function Community() {
                 <div className="flex items-center justify-center h-[400px]">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
+                {/* Chat Modal - render even during loading */}
+                {showChatModal && selectedMentor && (
+                    <ChatModal
+                        otherUser={selectedMentor}
+                        onClose={() => {
+                            setShowChatModal(false);
+                            setSelectedMentor(null);
+                        }}
+                    />
+                )}
             </LearnerLayout>
         );
     }
@@ -260,11 +305,23 @@ export default function Community() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 pt-4 border-t border-border-dark/50">
-                                        <button className="flex-1 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold text-sm transition-all flex items-center justify-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedMentor(mentor);
+                                                setShowBookingModal(true);
+                                            }}
+                                            className="flex-1 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold text-sm transition-all flex items-center justify-center gap-2"
+                                        >
                                             <span className="material-symbols-outlined text-lg">video_call</span>
                                             Đặt lịch
                                         </button>
-                                        <button className="px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedMentor(mentor);
+                                                setShowChatModal(true);
+                                            }}
+                                            className="px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all"
+                                        >
                                             <span className="material-symbols-outlined text-lg">chat</span>
                                         </button>
                                     </div>
@@ -278,6 +335,31 @@ export default function Community() {
                     </div>
                 )}
             </div>
+
+            {/* Booking Modal */}
+            {showBookingModal && selectedMentor && (
+                <BookingModal
+                    mentor={selectedMentor}
+                    onClose={() => {
+                        setShowBookingModal(false);
+                        setSelectedMentor(null);
+                    }}
+                    onSuccess={() => {
+                        fetchData();
+                    }}
+                />
+            )}
+
+            {/* Chat Modal */}
+            {showChatModal && selectedMentor && (
+                <ChatModal
+                    otherUser={selectedMentor}
+                    onClose={() => {
+                        setShowChatModal(false);
+                        setSelectedMentor(null);
+                    }}
+                />
+            )}
         </LearnerLayout>
     );
 }

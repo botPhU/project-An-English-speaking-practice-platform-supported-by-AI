@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import MentorLayout from '../../layouts/MentorLayout';
 import { mentorService } from '../../services/mentorService';
+import MyLearnerCard from '../../components/MyLearnerCard';
+import { useAuth } from '../../context/AuthContext';
+import ErrorBoundary from '../../components/ErrorBoundary';
 
 interface DashboardStats {
     label: string;
@@ -28,20 +31,18 @@ interface RecentFeedback {
 }
 
 export default function MentorDashboard() {
+    const { user: authUser } = useAuth();
     const [stats, setStats] = useState<DashboardStats[]>([]);
     const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([]);
     const [recentFeedback, setRecentFeedback] = useState<RecentFeedback[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    // TODO: Get mentor ID from auth context
-    const mentorId = 1;
+    const mentorId = Number(authUser?.id) || 0;
+    const mentorName = authUser?.name || 'Mentor';
 
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
+    const fetchDashboardData = useCallback(async () => {
+        if (mentorId <= 0) return;
 
-    const fetchDashboardData = async () => {
         try {
             setLoading(true);
             const response = await mentorService.getDashboard(mentorId);
@@ -101,34 +102,25 @@ export default function MentorDashboard() {
                     status: f.status || 'pending'
                 })));
             }
-
-            setError(null);
         } catch (err) {
             console.error('Error fetching mentor dashboard:', err);
-            setError('Không thể tải dữ liệu dashboard');
-
-            // Fallback data
+            // Set fallback data when API fails to prevent blank screen
             setStats([
-                { label: 'Học viên đang hướng dẫn', value: '24', icon: 'school', change: '+3 tuần này', up: true },
-                { label: 'Phiên trong tuần', value: '38', icon: 'event', change: '12 hôm nay', up: true },
-                { label: 'Đánh giá trung bình', value: '4.9', icon: 'star', change: '⭐ xuất sắc', up: true },
-                { label: 'Giờ hướng dẫn', value: '156', icon: 'schedule', change: 'Tháng này', up: true },
-            ]);
-            setUpcomingSessions([
-                { learner: 'Nguyễn Văn An', topic: 'IELTS Speaking Part 2', time: '09:00', level: 'Intermediate', avatar: 'NVA' },
-                { learner: 'Trần Thị Bình', topic: 'Pronunciation Practice', time: '10:30', level: 'Beginner', avatar: 'TTB' },
-                { learner: 'Lê Hoàng Cường', topic: 'Business English', time: '14:00', level: 'Advanced', avatar: 'LHC' },
-                { learner: 'Phạm Minh Dương', topic: 'Grammar Review', time: '15:30', level: 'Intermediate', avatar: 'PMD' },
-            ]);
-            setRecentFeedback([
-                { learner: 'Nguyễn Văn An', type: 'Pronunciation', issue: 'Âm /θ/ và /ð/ cần luyện thêm', status: 'pending' },
-                { learner: 'Trần Thị Bình', type: 'Grammar', issue: 'Sử dụng thì hiện tại hoàn thành', status: 'reviewed' },
-                { learner: 'Lê Hoàng Cường', type: 'Vocabulary', issue: 'Collocation với "make" và "do"', status: 'pending' },
+                { label: 'Học viên đang hướng dẫn', value: '0', icon: 'school', change: 'Chưa có dữ liệu', up: false },
+                { label: 'Phiên trong tuần', value: '0', icon: 'event', change: 'Chưa có dữ liệu', up: false },
+                { label: 'Đánh giá trung bình', value: '-', icon: 'star', change: 'Chưa có dữ liệu', up: false },
+                { label: 'Giờ hướng dẫn', value: '0', icon: 'schedule', change: 'Chưa có dữ liệu', up: false },
             ]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [mentorId]);
+
+    useEffect(() => {
+        if (mentorId > 0) {
+            fetchDashboardData();
+        }
+    }, [mentorId, fetchDashboardData]);
 
     return (
         <MentorLayout
@@ -234,21 +226,12 @@ export default function MentorDashboard() {
                         </div>
                     </div>
 
-                    {/* Quick Actions */}
+                    {/* My Learner & Quick Actions */}
                     <div className="space-y-4">
-                        <div className="rounded-xl bg-primary p-5 text-white">
-                            <div className="flex items-center gap-3 mb-4">
-                                <span className="material-symbols-outlined text-3xl">lightbulb</span>
-                                <div>
-                                    <h3 className="font-bold">Mẹo hôm nay</h3>
-                                    <p className="text-sm text-white/80">Nâng cao hiệu quả giảng dạy</p>
-                                </div>
-                            </div>
-                            <p className="text-sm text-white/90 leading-relaxed">
-                                Sử dụng kỹ thuật "shadowing" để giúp học viên cải thiện phát âm tự nhiên hơn.
-                                Cho học viên nghe và lặp lại ngay sau đó.
-                            </p>
-                        </div>
+                        {/* My Learner Card */}
+                        <ErrorBoundary>
+                            <MyLearnerCard mentorId={mentorId} mentorName={mentorName} />
+                        </ErrorBoundary>
 
                         <div className="rounded-xl bg-[#283039] border border-[#3e4854]/30 p-5">
                             <h3 className="font-bold text-white mb-4">Hành động nhanh</h3>
