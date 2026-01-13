@@ -108,3 +108,9 @@ Object Relational Mapping
 Ánh xạ 1 class (OOP)  model src/infrastructure/models --> Table in database 
 Ánh xạ các mối quan hệ (Relational) -- Khoá ngoại CSDL 
 (n-n): many to many 
+
+## Database Setup
+
+Project đang sử dụng **MySQL trên Railway**.
+
+👉 Đọc hướng dẫn chi tiết tại: [docs/DATABASE_GUIDE.md](docs/DATABASE_GUIDE.md) để biết cách lấy link kết nối và setup.
