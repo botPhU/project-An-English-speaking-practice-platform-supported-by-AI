@@ -67,12 +67,15 @@ export default function BookingModal({ mentor, onClose, onSuccess }: BookingModa
                 alert('Đặt lịch thành công! Mentor sẽ xác nhận sớm.');
                 onSuccess();
                 onClose();
+            } else if (response.data?.error) {
+                alert(`Lỗi: ${response.data.error}`);
             } else {
                 alert('Có lỗi xảy ra khi đặt lịch');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Booking error:', error);
-            alert('Có lỗi xảy ra');
+            const errorMsg = error.response?.data?.error || error.message || 'Có lỗi xảy ra';
+            alert(`Lỗi: ${errorMsg}`);
         } finally {
             setLoading(false);
         }

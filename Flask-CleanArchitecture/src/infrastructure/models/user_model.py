@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Date, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Date, Text, Float
 from sqlalchemy.orm import relationship
 from infrastructure.databases.base import Base
 
@@ -27,6 +27,12 @@ class UserModel(Base):
     country = Column(String(100), nullable=True)
     avatar_url = Column(String(500), nullable=True)
     bio = Column(Text, nullable=True)
+    
+    # Mentor Specific Fields
+    specialty = Column(String(100), nullable=True)
+    average_rating = Column(Float, default=5.0)
+    review_count = Column(Integer, default=0)
+    hourly_rate = Column(Integer, default=100000)
     
     # Profile Completion Tracking
     profile_completed = Column(Boolean, default=False)

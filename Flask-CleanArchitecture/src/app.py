@@ -54,8 +54,9 @@ def create_app():
     CORS(app, origins=[
         "http://localhost:5173", 
         "http://localhost:3000",
-        "https://aesp-frontend.nport.link",
-        "https://aesp-platform-2026.nport.link"
+        "https://aesp-frontend-dev.nport.link",
+        "https://aesp-frontend-2026.nport.link",
+        "https://aesp-platform-2026-dev.nport.link"
     ], supports_credentials=True)
     
     Swagger(app)

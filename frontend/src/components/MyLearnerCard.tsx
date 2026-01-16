@@ -3,6 +3,7 @@ import { assignmentService } from '../services/assignmentService';
 import { feedbackService } from '../services/feedbackService';
 import type { LearnerProgress } from '../services/feedbackService';
 import { videoService } from '../services/videoService';
+import { socketService } from '../services/socketService';
 import VideoCallModal from './VideoCallModal';
 import FeedbackForm from './FeedbackForm';
 import ChatModal from './ChatModal';
@@ -28,9 +29,10 @@ interface Assignment {
 interface MyLearnerCardProps {
     mentorId: number;
     mentorName: string;
+    mentorAvatar?: string;
 }
 
-const MyLearnerCard = ({ mentorId, mentorName }: MyLearnerCardProps) => {
+const MyLearnerCard = ({ mentorId, mentorName, mentorAvatar }: MyLearnerCardProps) => {
     const [assignment, setAssignment] = useState<Assignment | null>(null);
     const [progress, setProgress] = useState<LearnerProgress | null>(null);
     const [loading, setLoading] = useState(true);
@@ -38,6 +40,7 @@ const MyLearnerCard = ({ mentorId, mentorName }: MyLearnerCardProps) => {
     const [showFeedback, setShowFeedback] = useState(false);
     const [showChatModal, setShowChatModal] = useState(false);
     const [roomName, setRoomName] = useState('');
+    const [calling, setCalling] = useState(false);
 
     const fetchData = useCallback(async () => {
         if (mentorId <= 0) return;
@@ -65,14 +68,62 @@ const MyLearnerCard = ({ mentorId, mentorName }: MyLearnerCardProps) => {
         }
     }, [mentorId, fetchData]);
 
+    // Register call event listeners
+    useEffect(() => {
+        // When learner accepts the call
+        socketService.onCallAccepted((data) => {
+            console.log('[MyLearnerCard] Call accepted:', data);
+            setCalling(false);
+            setRoomName(data.roomName);
+            setShowVideoCall(true);
+        });
+
+        // When learner declines the call
+        socketService.onCallDeclined((data) => {
+            console.log('[MyLearnerCard] Call declined:', data);
+            setCalling(false);
+            alert('Học viên đã từ chối cuộc gọi');
+        });
+
+        // When call fails (user offline)
+        socketService.onCallFailed((data) => {
+            console.log('[MyLearnerCard] Call failed:', data);
+            setCalling(false);
+            alert('Học viên hiện không trực tuyến');
+        });
+
+        return () => {
+            socketService.removeCallCallbacks();
+        };
+    }, []);
+
     const handleStartCall = async () => {
         if (!assignment) return;
+
         try {
+            setCalling(true);
+
+            // Create video room first
             const room = await videoService.createRoom(0, mentorId, assignment.learner_id);
+
+            // Send call notification to learner via WebSocket
+            socketService.callUser(
+                String(mentorId),
+                mentorName,
+                mentorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${mentorName}`,
+                String(assignment.learner_id),
+                room.room_name
+            );
+
+            // Set room name for when call is accepted
             setRoomName(room.room_name);
-            setShowVideoCall(true);
+
+            // Show calling state - will show video call when accepted
+            console.log('[MyLearnerCard] Calling learner:', assignment.learner_id);
+
         } catch (error) {
             console.error('Error creating video room:', error);
+            setCalling(false);
         }
     };
 
@@ -171,10 +222,16 @@ const MyLearnerCard = ({ mentorId, mentorName }: MyLearnerCardProps) => {
                 <div className="flex gap-2">
                     <button
                         onClick={handleStartCall}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                        disabled={calling}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-colors ${calling
+                                ? 'bg-yellow-600/80 cursor-not-allowed'
+                                : 'bg-primary hover:bg-primary/90'
+                            }`}
                     >
-                        <span className="material-symbols-outlined text-sm">videocam</span>
-                        Gọi video
+                        <span className={`material-symbols-outlined text-sm ${calling ? 'animate-pulse' : ''}`}>
+                            {calling ? 'call' : 'videocam'}
+                        </span>
+                        {calling ? 'Đang gọi...' : 'Gọi video'}
                     </button>
                     <button
                         onClick={() => setShowChatModal(true)}

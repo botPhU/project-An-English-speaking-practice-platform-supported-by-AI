@@ -113,23 +113,143 @@ class MentorService:
     
     # ==================== DASHBOARD STATS ====================
     def get_dashboard_stats(self, mentor_id: int):
-        """Get mentor dashboard statistics"""
+        """Get mentor dashboard statistics with REAL data"""
         session = self._get_session()
         try:
-            # Count assigned learners
-            sessions = session.query(PracticeSessionModel)\
-                .filter_by(mentor_id=mentor_id)\
-                .all()
+            from sqlalchemy import func
+            from datetime import datetime, timedelta
+            from infrastructure.models.mentor_assignment_model import MentorAssignmentModel
             
-            learner_ids = set([s.user_id for s in sessions])
-            total_sessions = len(sessions)
-            completed_sessions = len([s for s in sessions if s.is_completed])
+            # Get assigned learners count
+            try:
+                from infrastructure.models.mentor_assignment_model import MentorAssignmentModel
+                total_learners = session.query(MentorAssignmentModel)\
+                    .filter_by(mentor_id=mentor_id, status='active')\
+                    .count()
+            except:
+                # Fallback: count unique learners from sessions
+                sessions_all = session.query(PracticeSessionModel)\
+                    .filter_by(mentor_id=mentor_id)\
+                    .all()
+                total_learners = len(set([s.user_id for s in sessions_all]))
+            
+            # Get sessions this week
+            today = datetime.now()
+            week_start = today - timedelta(days=today.weekday())
+            sessions_this_week = session.query(PracticeSessionModel)\
+                .filter(
+                    PracticeSessionModel.mentor_id == mentor_id,
+                    PracticeSessionModel.created_at >= week_start
+                ).count()
+            
+            # Get sessions today
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            sessions_today = session.query(PracticeSessionModel)\
+                .filter(
+                    PracticeSessionModel.mentor_id == mentor_id,
+                    PracticeSessionModel.created_at >= today_start
+                ).count()
+            
+            # Get average rating from reviews
+            avg_rating = None
+            total_reviews = 0
+            try:
+                from infrastructure.models.review_model import ReviewModel
+                rating_result = session.query(
+                    func.avg(ReviewModel.rating),
+                    func.count(ReviewModel.id)
+                ).filter_by(mentor_id=mentor_id).first()
+                
+                if rating_result and rating_result[0]:
+                    avg_rating = round(float(rating_result[0]), 1)
+                    total_reviews = rating_result[1]
+            except Exception as e:
+                print(f"[MENTOR_STATS] Reviews error: {e}")
+                avg_rating = None
+            
+            # Calculate hours this month from completed sessions
+            month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            completed_sessions = session.query(PracticeSessionModel)\
+                .filter(
+                    PracticeSessionModel.mentor_id == mentor_id,
+                    PracticeSessionModel.is_completed == True,
+                    PracticeSessionModel.created_at >= month_start
+                ).all()
+            
+            total_minutes = sum([s.duration_minutes or 0 for s in completed_sessions])
+            hours_this_month = round(total_minutes / 60, 1)
+            
+            # Get upcoming sessions from bookings
+            upcoming_sessions = []
+            try:
+                from infrastructure.models.mentor_booking_model import MentorBookingModel
+                bookings = session.query(MentorBookingModel)\
+                    .filter(
+                        MentorBookingModel.mentor_id == mentor_id,
+                        MentorBookingModel.status.in_(['pending', 'confirmed']),
+                        MentorBookingModel.scheduled_date >= today.date()
+                    )\
+                    .order_by(MentorBookingModel.scheduled_date, MentorBookingModel.scheduled_time)\
+                    .limit(5)\
+                    .all()
+                
+                for b in bookings:
+                    upcoming_sessions.append({
+                        'id': b.id,
+                        'learner_name': b.learner.full_name if b.learner else 'Học viên',
+                        'topic': b.topic or 'Chưa xác định',
+                        'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
+                        'scheduled_date': str(b.scheduled_date) if b.scheduled_date else '',
+                        'level': 'Intermediate',
+                        'status': b.status
+                    })
+            except Exception as e:
+                print(f"[MENTOR_STATS] Bookings error: {e}")
+            
+            # Get recent feedback needing review
+            recent_feedback = []
+            try:
+                pending_feedback = session.query(PracticeSessionModel)\
+                    .filter(
+                        PracticeSessionModel.mentor_id == mentor_id,
+                        PracticeSessionModel.is_completed == True
+                    )\
+                    .order_by(PracticeSessionModel.created_at.desc())\
+                    .limit(5)\
+                    .all()
+                
+                for f in pending_feedback:
+                    learner = session.query(UserModel).get(f.user_id)
+                    recent_feedback.append({
+                        'id': f.id,
+                        'learner_name': learner.full_name if learner else 'Học viên',
+                        'type': f.session_type or 'Speaking',
+                        'description': f.topic or 'Phiên luyện tập',
+                        'status': 'reviewed' if f.ai_feedback else 'pending'
+                    })
+            except Exception as e:
+                print(f"[MENTOR_STATS] Feedback error: {e}")
             
             return {
-                'total_learners': len(learner_ids),
-                'total_sessions': total_sessions,
-                'completed_sessions': completed_sessions,
-                'pending_sessions': total_sessions - completed_sessions
+                'total_learners': total_learners,
+                'sessions_this_week': sessions_this_week,
+                'sessions_today': sessions_today,
+                'avg_rating': avg_rating,
+                'total_reviews': total_reviews,
+                'hours_this_month': hours_this_month,
+                'upcoming_sessions': upcoming_sessions,
+                'recent_feedback': recent_feedback
+            }
+        except Exception as e:
+            print(f"[MENTOR_STATS] Error: {e}")
+            return {
+                'total_learners': 0,
+                'sessions_this_week': 0,
+                'sessions_today': 0,
+                'avg_rating': None,
+                'hours_this_month': 0,
+                'upcoming_sessions': [],
+                'recent_feedback': []
             }
         finally:
             session.close()

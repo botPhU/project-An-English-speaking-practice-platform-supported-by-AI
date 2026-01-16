@@ -1,64 +1,85 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { learnerService } from '../../services/learnerService';
+import api from '../../services/api';
+import BookingRequestsModal from '../mentor/BookingRequestsModal';
 
 interface Notification {
     id: string;
-    type: 'success' | 'warning' | 'info' | 'error';
+    type: 'success' | 'warning' | 'info' | 'error' | 'booking' | 'session' | 'assignment';
     title: string;
     message: string;
     time: string;
     read: boolean;
     avatar?: string;
+    action_url?: string;
+    notification_type?: string;
 }
 
 const NotificationDropdown: React.FC = () => {
+    const navigate = useNavigate();
     const { user: authUser } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    // Booking modal state
+    const [showBookingModal, setShowBookingModal] = useState(false);
+
     const unreadCount = notifications.filter(n => !n.read).length;
 
     // Fetch notifications from API
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            if (!authUser?.id) {
-                setLoading(false);
-                return;
+    const fetchNotifications = async () => {
+        if (!authUser?.id) {
+            setLoading(false);
+            return;
+        }
+        try {
+            const response = await learnerService.getNotifications(Number(authUser.id), 10);
+            // Handle various API response formats
+            let notificationData: any[] = [];
+            if (Array.isArray(response.data)) {
+                notificationData = response.data;
+            } else if (response.data?.notifications && Array.isArray(response.data.notifications)) {
+                notificationData = response.data.notifications;
+            } else if (response.data?.data && Array.isArray(response.data.data)) {
+                notificationData = response.data.data;
             }
-            try {
-                const response = await learnerService.getNotifications(Number(authUser.id), 10);
-                // Handle various API response formats
-                let notificationData: any[] = [];
-                if (Array.isArray(response.data)) {
-                    notificationData = response.data;
-                } else if (response.data?.notifications && Array.isArray(response.data.notifications)) {
-                    notificationData = response.data.notifications;
-                } else if (response.data?.data && Array.isArray(response.data.data)) {
-                    notificationData = response.data.data;
-                }
 
-                // Map API response to Notification format
-                const mappedNotifications = notificationData.map((n: any) => ({
-                    id: String(n.id),
-                    type: n.type || 'info',
-                    title: n.title || 'Thông báo',
-                    message: n.message || n.content || '',
-                    time: n.created_at ? formatTimeAgo(n.created_at) : '',
-                    read: n.is_read || false,
-                    avatar: n.avatar_url
-                }));
-                setNotifications(mappedNotifications);
-            } catch (error) {
-                console.error('Error fetching notifications:', error);
-                setNotifications([]);
-            } finally {
-                setLoading(false);
-            }
-        };
+            // Map API response to Notification format
+            const mappedNotifications = notificationData.map((n: any) => ({
+                id: String(n.id),
+                type: n.notification_type || n.type || 'info',
+                title: n.title || 'Thông báo',
+                message: n.message || n.content || '',
+                time: n.created_at ? formatTimeAgo(n.created_at) : '',
+                read: n.is_read || false,
+                avatar: n.avatar_url,
+                action_url: n.action_url,
+                notification_type: n.notification_type
+            }));
+            setNotifications(mappedNotifications);
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+            setNotifications([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchNotifications();
+
+        // Poll for new notifications every 30 seconds
+        const interval = setInterval(() => {
+            if (authUser?.id) {
+                fetchNotifications();
+            }
+        }, 30000);
+
+        return () => clearInterval(interval);
     }, [authUser?.id]);
 
     // Helper to format relative time
@@ -88,14 +109,45 @@ const NotificationDropdown: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const markAsRead = (id: string) => {
+    const handleNotificationClick = async (notification: Notification) => {
+        // Mark as read first
         setNotifications(prev =>
-            prev.map(n => n.id === id ? { ...n, read: true } : n)
+            prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
         );
+
+        // Call API to persist
+        try {
+            await learnerService.markNotificationRead(Number(notification.id));
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+
+        // Handle navigation based on notification type
+        const notifType = notification.notification_type || notification.type;
+
+        if (notifType === 'booking') {
+            // For booking notifications, show the booking modal
+            setIsOpen(false);
+            setShowBookingModal(true);
+        } else if (notification.action_url) {
+            // For other types with action_url, navigate
+            setIsOpen(false);
+            navigate(notification.action_url);
+        }
     };
 
-    const markAllAsRead = () => {
+    const markAllAsRead = async () => {
+        // Update local state immediately
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+        // Call API to persist
+        if (authUser?.id) {
+            try {
+                await api.put(`/notifications/user/${authUser.id}/read-all`);
+            } catch (error) {
+                console.error('Error marking all notifications as read:', error);
+            }
+        }
     };
 
     const getTypeStyles = (type: Notification['type']) => {
@@ -106,6 +158,12 @@ const NotificationDropdown: React.FC = () => {
                 return { bg: 'bg-amber-500/20', text: 'text-amber-400', icon: 'warning' };
             case 'error':
                 return { bg: 'bg-rose-500/20', text: 'text-rose-400', icon: 'error' };
+            case 'booking':
+                return { bg: 'bg-purple-500/20', text: 'text-purple-400', icon: 'calendar_month' };
+            case 'session':
+                return { bg: 'bg-cyan-500/20', text: 'text-cyan-400', icon: 'mic' };
+            case 'assignment':
+                return { bg: 'bg-orange-500/20', text: 'text-orange-400', icon: 'person_add' };
             case 'info':
             default:
                 return { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: 'info' };
@@ -154,7 +212,12 @@ const NotificationDropdown: React.FC = () => {
 
                     {/* Notifications List */}
                     <div className="overflow-y-auto max-h-[360px] divide-y divide-[#3b4754]/50">
-                        {notifications.length === 0 ? (
+                        {loading ? (
+                            <div className="p-8 text-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                                <p className="text-[#9dabb9] text-sm">Đang tải...</p>
+                            </div>
+                        ) : notifications.length === 0 ? (
                             <div className="p-8 text-center">
                                 <span className="material-symbols-outlined text-5xl text-[#3b4754] mb-2">notifications_off</span>
                                 <p className="text-[#9dabb9] text-sm">Không có thông báo nào</p>
@@ -165,7 +228,7 @@ const NotificationDropdown: React.FC = () => {
                                 return (
                                     <div
                                         key={notification.id}
-                                        onClick={() => markAsRead(notification.id)}
+                                        onClick={() => handleNotificationClick(notification)}
                                         className={`p-4 flex gap-3 cursor-pointer transition-colors hover:bg-[#283039]/70
                                             ${!notification.read ? 'bg-primary/5' : ''}`}
                                     >
@@ -214,6 +277,16 @@ const NotificationDropdown: React.FC = () => {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* Booking Requests Modal */}
+            {authUser?.role === 'mentor' && (
+                <BookingRequestsModal
+                    mentorId={Number(authUser.id)}
+                    isOpen={showBookingModal}
+                    onClose={() => setShowBookingModal(false)}
+                    onBookingUpdate={fetchNotifications}
+                />
             )}
         </div>
     );

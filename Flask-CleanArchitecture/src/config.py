@@ -9,8 +9,12 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / '.env'
 if env_path.exists():
     load_dotenv(env_path)
-else:
-    load_dotenv()
+
+# Also load from parent directory (.env in Flask-CleanArchitecture)
+parent_env = Path(__file__).parent.parent / '.env'
+if parent_env.exists():
+    load_dotenv(parent_env, override=True) # Allow parent .env to override/add
+
 
 # Debug: Print if API key is loaded
 _api_key = os.environ.get('GEMINI_API_KEY', '')

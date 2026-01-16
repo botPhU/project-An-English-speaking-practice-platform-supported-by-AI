@@ -48,7 +48,16 @@ AESP/
 - React + TypeScript
 - Vite
 
-## 🚀 Cách chạy dự án
+## 🚀 Cách chạy dự án (One-Click)
+
+> **Khuyên dùng:** Xem chi tiết tại [INSTRUCTION_RUN.md](INSTRUCTION_RUN.md)
+
+Chỉ cần chạy file:
+```bash
+.\start_all.bat
+```
+
+## ⚙️ Cách chạy thủ công 
 
 ### Backend
 ```bash

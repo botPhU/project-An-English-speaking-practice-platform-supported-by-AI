@@ -36,4 +36,20 @@ export const mentorService = {
     // Practice Sessions (for reviewing learner recordings)
     getPracticeSessions: (mentorId: number) => api.get(`/practice/sessions/mentor/${mentorId}`),
     getSessionAudioUrl: (sessionId: number) => `/api/practice/sessions/${sessionId}/audio`,
+
+    // Booking Management
+    getBookings: (mentorId: number) => api.get(`/learner/bookings/${mentorId}`, { params: { role: 'mentor' } }),
+    updateBookingStatus: (bookingId: number, status: string) => api.put(`/learner/booking/${bookingId}`, { status }),
+
+    // Reviews
+    submitReview: (data: {
+        learner_id: number;
+        mentor_id: number;
+        rating: number;
+        comment?: string;
+        session_id?: number;
+        booking_id?: number;
+    }) => api.post('/mentor/reviews', data),
+
+    getMentorReviews: (mentorId: number) => api.get(`/mentor/reviews/${mentorId}`),
 };

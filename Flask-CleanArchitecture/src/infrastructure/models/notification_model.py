@@ -34,7 +34,8 @@ class NotificationModel(Base):
             'user_id': self.user_id,
             'title': self.title,
             'message': self.message,
-            'notification_type': self.notification_type,
+            'type': self.notification_type,  # Frontend expects 'type' not 'notification_type'
+            'notification_type': self.notification_type,  # Keep for backwards compatibility
             'is_read': self.is_read,
             'action_url': self.action_url,
             'created_at': self.created_at.isoformat() if self.created_at else None

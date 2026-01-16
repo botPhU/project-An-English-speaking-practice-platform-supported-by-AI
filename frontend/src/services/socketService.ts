@@ -1,17 +1,28 @@
 /**
  * Socket.IO Service
- * Global socket connection for real-time user status
+ * Global socket connection for real-time user status and video calls
  */
 
 import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5000';
 
+export interface IncomingCallData {
+    callerId: string;
+    callerName: string;
+    callerAvatar?: string;
+    roomName: string;
+}
+
 class SocketService {
     private socket: Socket | null = null;
     private userId: string | null = null;
     private onlineUsers: Set<string> = new Set();
     private onlineStatusCallbacks: Map<string, (isOnline: boolean) => void> = new Map();
+    private incomingCallCallback: ((data: IncomingCallData) => void) | null = null;
+    private callAcceptedCallback: ((data: { targetUserId: string; roomName: string }) => void) | null = null;
+    private callDeclinedCallback: ((data: { targetUserId: string; reason: string }) => void) | null = null;
+    private callFailedCallback: ((data: { targetUserId: string; reason: string }) => void) | null = null;
 
     connect(): Socket {
         if (this.socket?.connected) {
@@ -52,6 +63,45 @@ class SocketService {
             const callback = this.onlineStatusCallbacks.get(data.userId);
             if (callback) {
                 callback(data.isOnline);
+            }
+        });
+
+        // ============ VIDEO CALL EVENTS ============
+
+        // Incoming call notification (for learner)
+        this.socket.on('incoming_call', (data: IncomingCallData) => {
+            console.log('[SocketService] Incoming call:', data);
+            if (this.incomingCallCallback) {
+                this.incomingCallCallback(data);
+            }
+        });
+
+        // Call sent confirmation (for mentor)
+        this.socket.on('call_sent', (data: { targetUserId: string; status: string }) => {
+            console.log('[SocketService] Call sent:', data);
+        });
+
+        // Call failed (user offline)
+        this.socket.on('call_failed', (data: { targetUserId: string; reason: string }) => {
+            console.log('[SocketService] Call failed:', data);
+            if (this.callFailedCallback) {
+                this.callFailedCallback(data);
+            }
+        });
+
+        // Call accepted by learner
+        this.socket.on('call_accepted', (data: { targetUserId: string; roomName: string }) => {
+            console.log('[SocketService] Call accepted:', data);
+            if (this.callAcceptedCallback) {
+                this.callAcceptedCallback(data);
+            }
+        });
+
+        // Call declined by learner
+        this.socket.on('call_declined', (data: { targetUserId: string; reason: string }) => {
+            console.log('[SocketService] Call declined:', data);
+            if (this.callDeclinedCallback) {
+                this.callDeclinedCallback(data);
             }
         });
 
@@ -113,6 +163,74 @@ class SocketService {
 
     isConnected(): boolean {
         return this.socket?.connected ?? false;
+    }
+
+    // ============ VIDEO CALL METHODS ============
+
+    // Initiate a call to another user
+    callUser(callerId: string, callerName: string, callerAvatar: string, targetUserId: string, roomName: string): void {
+        if (this.socket?.connected) {
+            this.socket.emit('call_user', {
+                callerId,
+                callerName,
+                callerAvatar,
+                targetUserId,
+                roomName
+            });
+            console.log('[SocketService] Calling user:', targetUserId);
+        }
+    }
+
+    // Accept an incoming call
+    acceptCall(callerId: string, targetUserId: string, roomName: string): void {
+        if (this.socket?.connected) {
+            this.socket.emit('call_accepted', {
+                callerId,
+                targetUserId,
+                roomName
+            });
+            console.log('[SocketService] Accepted call from:', callerId);
+        }
+    }
+
+    // Decline an incoming call
+    declineCall(callerId: string, targetUserId: string, reason?: string): void {
+        if (this.socket?.connected) {
+            this.socket.emit('call_declined', {
+                callerId,
+                targetUserId,
+                reason: reason || 'User declined the call'
+            });
+            console.log('[SocketService] Declined call from:', callerId);
+        }
+    }
+
+    // Register callback for incoming calls
+    onIncomingCall(callback: (data: IncomingCallData) => void): void {
+        this.incomingCallCallback = callback;
+    }
+
+    // Register callback for call accepted
+    onCallAccepted(callback: (data: { targetUserId: string; roomName: string }) => void): void {
+        this.callAcceptedCallback = callback;
+    }
+
+    // Register callback for call declined
+    onCallDeclined(callback: (data: { targetUserId: string; reason: string }) => void): void {
+        this.callDeclinedCallback = callback;
+    }
+
+    // Register callback for call failed
+    onCallFailed(callback: (data: { targetUserId: string; reason: string }) => void): void {
+        this.callFailedCallback = callback;
+    }
+
+    // Remove call callbacks
+    removeCallCallbacks(): void {
+        this.incomingCallCallback = null;
+        this.callAcceptedCallback = null;
+        this.callDeclinedCallback = null;
+        this.callFailedCallback = null;
     }
 }
 
