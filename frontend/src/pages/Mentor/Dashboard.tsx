@@ -48,35 +48,35 @@ export default function MentorDashboard() {
             const response = await mentorService.getDashboard(mentorId);
             const data = response.data;
 
-            // Map stats from API
+            // Map stats from API - NO MORE FAKE VALUES
             setStats([
                 {
                     label: 'Học viên đang hướng dẫn',
-                    value: data.total_learners?.toString() || '24',
+                    value: data.total_learners?.toString() || '0',
                     icon: 'school',
-                    change: data.learners_change || '+3 tuần này',
-                    up: true
+                    change: data.total_learners > 0 ? 'Đang hoạt động' : 'Chưa có học viên',
+                    up: data.total_learners > 0
                 },
                 {
                     label: 'Phiên trong tuần',
-                    value: data.sessions_this_week?.toString() || '38',
+                    value: data.sessions_this_week?.toString() || '0',
                     icon: 'event',
-                    change: data.sessions_today ? `${data.sessions_today} hôm nay` : '12 hôm nay',
-                    up: true
+                    change: data.sessions_today ? `${data.sessions_today} hôm nay` : 'Chưa có phiên',
+                    up: data.sessions_this_week > 0
                 },
                 {
                     label: 'Đánh giá trung bình',
-                    value: data.avg_rating?.toString() || '4.9',
+                    value: data.avg_rating?.toString() || '-',
                     icon: 'star',
-                    change: '⭐ xuất sắc',
-                    up: true
+                    change: data.total_reviews ? `${data.total_reviews} đánh giá` : 'Chưa có đánh giá',
+                    up: data.avg_rating >= 4
                 },
                 {
                     label: 'Giờ hướng dẫn',
-                    value: data.hours_this_month?.toString() || '156',
+                    value: data.hours_this_month?.toString() || '0',
                     icon: 'schedule',
                     change: 'Tháng này',
-                    up: true
+                    up: data.hours_this_month > 0
                 },
             ]);
 

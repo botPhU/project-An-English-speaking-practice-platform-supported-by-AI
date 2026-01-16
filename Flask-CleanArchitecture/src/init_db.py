@@ -84,34 +84,13 @@ def init_database():
     except Exception as e:
         print(f"\n✗ Error: {e}")
         print("\nMake sure:")
-        print("  1. SQL Server is running (Docker container)")
-        print("  2. Database 'FlaskApiDB' exists")
-        print("  3. Connection string in .env is correct")
+        print("  1. Database server is running")
+        print("  2. Connection string in .env is correct")
         return False
 
 
-def create_database_if_not_exists():
-    """Create the FlaskApiDB database if it doesn't exist"""
-    try:
-        # Connect to master database first
-        master_uri = Config.DATABASE_URI.replace('/FlaskApiDB', '/master')
-        engine = create_engine(master_uri)
-        
-        with engine.connect() as conn:
-            # Check if database exists
-            result = conn.execute(text(
-                "SELECT name FROM sys.databases WHERE name = 'FlaskApiDB'"
-            ))
-            if not result.fetchone():
-                print("Creating database 'FlaskApiDB'...")
-                conn.execute(text("CREATE DATABASE FlaskApiDB"))
-                conn.commit()
-                print("✓ Database created!")
-            else:
-                print("✓ Database 'FlaskApiDB' already exists")
-                
-    except Exception as e:
-        print(f"Note: Could not check/create database: {e}")
+
+# Validating database connection...
 
 
 def insert_sample_data():
@@ -187,10 +166,7 @@ def insert_sample_data():
 
 
 if __name__ == "__main__":
-    print("\nStep 1: Check/Create Database")
-    create_database_if_not_exists()
-    
-    print("\nStep 2: Create Tables")
+    print("\nStep 1: Check Database & Create Tables")
     if init_database():
-        print("\nStep 3: Insert Sample Data")
+        print("\nStep 2: Insert Sample Data")
         insert_sample_data()

@@ -127,3 +127,88 @@ def share_resource():
     mentor_id = data.get('mentor_id')
     resource = mentor_service.share_resource(mentor_id, data)
     return jsonify({'message': 'Resource shared'}), 201
+
+
+# ==================== REVIEWS ====================
+@mentor_bp.route('/reviews', methods=['POST'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Submit a review for a mentor',
+    'responses': {'201': {'description': 'Review submitted'}}
+})
+def submit_review():
+    """Submit a review for a mentor (by learner)"""
+    try:
+        from infrastructure.models.review_model import ReviewModel
+        from infrastructure.databases.mssql import session as db_session
+        from datetime import datetime
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('learner_id') or not data.get('mentor_id'):
+            return jsonify({'error': 'learner_id và mentor_id là bắt buộc'}), 400
+        if not data.get('rating') or not (1 <= data.get('rating') <= 5):
+            return jsonify({'error': 'rating phải từ 1 đến 5'}), 400
+        
+        review = ReviewModel(
+            learner_id=data.get('learner_id'),
+            mentor_id=data.get('mentor_id'),
+            session_id=data.get('session_id'),
+            booking_id=data.get('booking_id'),
+            rating=data.get('rating'),
+            comment=data.get('comment'),
+            created_at=datetime.now()
+        )
+        
+        db_session.add(review)
+        db_session.commit()
+        
+        return jsonify({
+            'id': review.id,
+            'message': 'Đánh giá đã được gửi thành công!'
+        }), 201
+        
+    except Exception as e:
+        print(f"[SUBMIT_REVIEW] Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@mentor_bp.route('/reviews/<int:mentor_id>', methods=['GET'])
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Get reviews for a mentor',
+    'responses': {'200': {'description': 'List of reviews'}}
+})
+def get_mentor_reviews(mentor_id):
+    """Get all reviews for a mentor"""
+    try:
+        from infrastructure.models.review_model import ReviewModel
+        from infrastructure.databases.mssql import session as db_session
+        from sqlalchemy import func
+        
+        reviews = db_session.query(ReviewModel)\
+            .filter_by(mentor_id=mentor_id)\
+            .order_by(ReviewModel.created_at.desc())\
+            .limit(20)\
+            .all()
+        
+        # Get average rating
+        avg_result = db_session.query(
+            func.avg(ReviewModel.rating),
+            func.count(ReviewModel.id)
+        ).filter_by(mentor_id=mentor_id).first()
+        
+        avg_rating = round(float(avg_result[0]), 1) if avg_result[0] else None
+        total_reviews = avg_result[1] if avg_result[1] else 0
+        
+        return jsonify({
+            'reviews': [r.to_dict() for r in reviews],
+            'avg_rating': avg_rating,
+            'total_reviews': total_reviews
+        }), 200
+        
+    except Exception as e:
+        print(f"[GET_REVIEWS] Error: {e}")
+        return jsonify({'reviews': [], 'avg_rating': None, 'total_reviews': 0}), 200
+

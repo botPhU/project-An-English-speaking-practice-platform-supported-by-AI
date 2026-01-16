@@ -430,33 +430,49 @@ def get_conversations(user_id):
 })
 def create_booking():
     """Create a mentor booking"""
-    data = request.get_json()
-    booking = learner_service.create_booking(data)
-    
-    # Send real-time notification to mentor via WebSocket
-    from api.websocket import socketio, connected_users
-    from services.notification_service import NotificationService
-    
-    mentor_id = data.get('mentor_id')
-    learner_id = data.get('learner_id')
-    
-    # Create notification in database
-    NotificationService.create_notification(
-        user_id=mentor_id,
-        title="📅 Yêu cầu đặt lịch mới",
-        message=f"Học viên đã đặt lịch học vào {data.get('scheduled_date')} lúc {data.get('scheduled_time')}",
-        notification_type="booking",
-        action_url="/mentor/dashboard"
-    )
-    
-    # Send real-time if mentor is online
-    if str(mentor_id) in connected_users:
-        socketio.emit('new_booking', {
-            'type': 'NEW_BOOKING',
-            'booking': booking
-        }, room=connected_users[str(mentor_id)].get('sid'))
-    
-    return jsonify(booking), 201
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('learner_id') or not data.get('mentor_id'):
+            return jsonify({'error': 'learner_id và mentor_id là bắt buộc'}), 400
+        if not data.get('scheduled_date') or not data.get('scheduled_time'):
+            return jsonify({'error': 'scheduled_date và scheduled_time là bắt buộc'}), 400
+        
+        booking = learner_service.create_booking(data)
+        
+        # Check if booking creation failed
+        if booking.get('error'):
+            return jsonify({'error': booking['error']}), 400
+        
+        # Send real-time notification to mentor via WebSocket
+        from api.websocket import socketio, connected_users
+        from services.notification_service import NotificationService
+        
+        mentor_id = data.get('mentor_id')
+        learner_name = booking.get('learner_name', 'Học viên')
+        
+        # Create notification in database with learner name
+        NotificationService.create_notification(
+            user_id=mentor_id,
+            title="📅 Yêu cầu đặt lịch mới",
+            message=f"{learner_name} đã đặt lịch học vào {data.get('scheduled_date')} lúc {data.get('scheduled_time')}",
+            notification_type="booking",
+            action_url="/mentor/dashboard"
+        )
+        
+        # Send real-time if mentor is online
+        if str(mentor_id) in connected_users:
+            socketio.emit('new_booking', {
+                'type': 'NEW_BOOKING',
+                'booking': booking
+            }, room=connected_users[str(mentor_id)].get('sid'))
+        
+        return jsonify(booking), 201
+        
+    except Exception as e:
+        print(f"[CREATE_BOOKING] Error: {str(e)}")
+        return jsonify({'error': f'Có lỗi khi tạo booking: {str(e)}'}), 500
 
 
 @learner_bp.route('/booking/<int:booking_id>', methods=['PUT'])

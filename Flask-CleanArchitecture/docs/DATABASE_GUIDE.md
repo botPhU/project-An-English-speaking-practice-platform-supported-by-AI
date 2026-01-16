@@ -33,3 +33,15 @@ python app.py
 Nếu thấy log hiện:
 `✓ Database connection successful!`
 thì bạn đã cấu hình thành công.
+
+## 4. Thêm dữ liệu mẫu (Seeding)
+
+Để thêm dữ liệu mẫu (Users, Packages, Idioms...) vào database:
+
+1.  Mở file `src/seed_data.py` để xem hoặc chỉnh sửa dữ liệu nếu muốn.
+2.  Chạy lệnh:
+    ```bash
+    python seed_data.py
+    ```
+
+Script này sẽ tự động kiểm tra, nếu dữ liệu đã có thì sẽ bỏ qua để tránh trùng lặp.

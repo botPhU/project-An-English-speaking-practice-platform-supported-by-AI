@@ -490,17 +490,19 @@ class LearnerService:
                     mentor_data = {
                         'id': m.id,
                         'name': m.full_name or m.user_name,
-                        'specialty': m.description or 'General English',
-                        'avatar': m.user_name[:2].upper() if m.user_name else 'MT',
+                        'full_name': m.full_name or m.user_name,
+                        'specialty': m.specialty or m.description or 'General English',
+                        'bio': m.bio or 'Experienced English mentor.',
+                        'rating': m.average_rating if m.average_rating else 5.0,
+                        'review_count': m.review_count if m.review_count else 0,
+                        'avatar': m.avatar_url or f'https://ui-avatars.com/api/?name={m.user_name}&background=random',
                         'available': True
                     }
                     # Filter by specialty if specified
                     if specialty == 'all' or specialty.lower() in mentor_data['specialty'].lower():
                         result.append(mentor_data)
                 
-                return result if result else [
-                    {'id': 0, 'name': 'No mentors available', 'specialty': '-', 'available': False}
-                ]
+                return result if result else []
         except Exception as e:
             print(f"Mentors error: {e}")
             return []

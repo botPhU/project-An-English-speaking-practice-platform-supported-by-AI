@@ -51,7 +51,7 @@ class AIService:
             try:
                 genai.configure(api_key=current_key)
                 # Test the key with available models
-                models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro']
+                models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash']
                 for model_name in models_to_try:
                     try:
                         m = genai.GenerativeModel(model_name)
@@ -79,12 +79,16 @@ class AIService:
             try:
                 return self.model.generate_content(prompt, **kwargs)
             except Exception as e:
-                if "429" in str(e) or "quota" in str(e).lower():
-                    logger.warning(f"[AIService] Quota hit! Rotating key...")
+                is_quota = "429" in str(e) or "quota" in str(e).lower()
+                if is_quota:
+                    logger.warning(f"[AIService] Quota hit on loop! Rotating key...")
                     AIService._current_key_index = (AIService._current_key_index + 1) % len(AIService._api_keys)
                     self.model = self._get_active_model()
                 else:
+                    logger.error(f"[AIService] Non-quota error during generate: {e}")
                     raise e
+                    
+        logger.error("[AIService] All API keys exhausted or failed.")
         return None
 
     def get_vocabulary_suggestions(self, topic):
