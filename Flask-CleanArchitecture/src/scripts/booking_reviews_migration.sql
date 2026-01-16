@@ -1,6 +1,8 @@
 -- AESP Booking and Reviews Migration for MySQL
 -- Run this script to add mentor_bookings and reviews tables
 
+-- For local: USE aesp_db;
+-- For Railway: USE railway;
 USE aesp_db;
 
 -- =============================================
