@@ -28,23 +28,19 @@ class MentorAssignmentService:
         finally:
             session.close()
     
-    def get_mentor_learner(self, mentor_id: int) -> Optional[Dict]:
-        """Get the learner assigned to a mentor"""
-        session = get_db_session()
-        try:
-            assignment = session.query(MentorAssignmentModel).filter(
-                MentorAssignmentModel.mentor_id == mentor_id,
-                MentorAssignmentModel.status == 'active'
-            ).first()
-            
-            if assignment:
-                return assignment.to_dict()
-            return None
-        except Exception as e:
-            print(f"[MentorAssignment] Error getting mentor's learner: {e}")
-            return None
-        finally:
-            session.close()
+    def get_mentor_learner(self, mentor_id: int) -> List[Dict]:
+        """Get ALL learners assigned to a mentor (1-to-many support)"""
+        with get_db_session() as session:
+            try:
+                assignments = session.query(MentorAssignmentModel).filter(
+                    MentorAssignmentModel.mentor_id == mentor_id,
+                    MentorAssignmentModel.status == 'active'
+                ).order_by(MentorAssignmentModel.assigned_at.desc()).all()
+                
+                return [a.to_dict() for a in assignments]
+            except Exception as e:
+                print(f"[MentorAssignment] Error getting mentor's learners: {e}")
+                return []
     
     def get_learner_mentor(self, learner_id: int) -> Optional[Dict]:
         """Get the mentor assigned to a learner"""

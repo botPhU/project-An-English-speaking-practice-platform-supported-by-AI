@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { learnerService } from '../../services/learnerService';
@@ -279,14 +280,15 @@ const NotificationDropdown: React.FC = () => {
                 </div>
             )}
 
-            {/* Booking Requests Modal */}
-            {authUser?.role === 'mentor' && (
+            {/* Booking Requests Modal - rendered via portal to escape relative container */}
+            {authUser?.role === 'mentor' && showBookingModal && ReactDOM.createPortal(
                 <BookingRequestsModal
                     mentorId={Number(authUser.id)}
                     isOpen={showBookingModal}
                     onClose={() => setShowBookingModal(false)}
                     onBookingUpdate={fetchNotifications}
-                />
+                />,
+                document.body
             )}
         </div>
     );

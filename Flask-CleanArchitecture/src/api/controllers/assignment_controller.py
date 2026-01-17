@@ -98,22 +98,20 @@ def get_unassigned_learners():
 @assignment_bp.route('/mentor/my-learner', methods=['GET'])
 @swag_from({
     'tags': ['Assignments'],
-    'summary': 'Get mentor assigned learner',
+    'summary': 'Get mentor assigned learners (supports multiple)',
     'parameters': [
         {'name': 'mentor_id', 'in': 'query', 'type': 'integer', 'required': True}
     ],
-    'responses': {'200': {'description': 'Assigned learner info'}}
+    'responses': {'200': {'description': 'List of assigned learners'}}
 })
 def get_mentor_learner():
-    """Get the learner assigned to current mentor"""
+    """Get ALL learners assigned to current mentor (1-to-many)"""
     mentor_id = request.args.get('mentor_id', type=int)
     if not mentor_id:
         return jsonify({'error': 'mentor_id is required'}), 400
     
-    assignment = mentor_assignment_service.get_mentor_learner(mentor_id)
-    if assignment:
-        return jsonify(assignment), 200
-    return jsonify({'message': 'No learner assigned'}), 200
+    assignments = mentor_assignment_service.get_mentor_learner(mentor_id)
+    return jsonify(assignments), 200
 
 
 # ==================== LEARNER ENDPOINTS ====================

@@ -482,9 +482,34 @@ def create_booking():
     'responses': {'200': {'description': 'Booking updated'}}
 })
 def update_booking(booking_id):
-    """Update a booking status"""
+    """Update a booking status and notify learner via WebSocket"""
     data = request.get_json()
     booking = learner_service.update_booking(booking_id, data)
+    
+    # Send real-time notification via WebSocket to learner
+    if not booking.get('error') and data.get('status'):
+        from api.websocket import socketio, connected_users
+        
+        learner_id = booking.get('learner_id')
+        new_status = data.get('status')
+        mentor_name = booking.get('mentor_name', 'Mentor')
+        
+        if learner_id and str(learner_id) in connected_users:
+            status_messages = {
+                'confirmed': f'✅ Mentor {mentor_name} đã xác nhận lịch hẹn của bạn!',
+                'rejected': f'❌ Mentor {mentor_name} đã từ chối lịch hẹn. Vui lòng đặt lại.',
+                'completed': f'🎉 Phiên học với {mentor_name} đã hoàn thành!'
+            }
+            
+            if new_status in status_messages:
+                socketio.emit('booking_update', {
+                    'type': 'BOOKING_UPDATE',
+                    'booking_id': booking_id,
+                    'status': new_status,
+                    'message': status_messages[new_status],
+                    'booking': booking
+                }, room=connected_users[str(learner_id)].get('sid'))
+    
     return jsonify(booking), 200
 
 

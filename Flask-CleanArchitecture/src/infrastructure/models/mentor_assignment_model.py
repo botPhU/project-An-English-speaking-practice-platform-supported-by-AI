@@ -1,23 +1,28 @@
 """
 Mentor Assignment Model
-Database model for 1-to-1 mentor-learner assignments
+Database model for mentor-learner assignments (1-to-many: one mentor can have multiple learners)
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from infrastructure.databases.mssql import Base
 from datetime import datetime
 
 
 class MentorAssignmentModel(Base):
-    """Model for 1-to-1 mentor-learner assignments"""
+    """Model for mentor-learner assignments (1-to-many)"""
     __tablename__ = 'mentor_assignments'
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        # Unique constraint: each mentor-learner pair can only have one active assignment
+        UniqueConstraint('mentor_id', 'learner_id', name='uq_mentor_learner'),
+        {'extend_existing': True}
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     
-    # 1-to-1 relationship - each mentor has one learner, each learner has one mentor
-    mentor_id = Column(Integer, ForeignKey('flask_user.id'), nullable=False, unique=True)
-    learner_id = Column(Integer, ForeignKey('flask_user.id'), nullable=False, unique=True)
+    # 1-to-many relationship - each mentor can have multiple learners
+    mentor_id = Column(Integer, ForeignKey('flask_user.id'), nullable=False)
+    learner_id = Column(Integer, ForeignKey('flask_user.id'), nullable=False)
+
     
     # Admin who made the assignment
     assigned_by = Column(Integer, ForeignKey('flask_user.id'), nullable=False)

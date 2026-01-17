@@ -33,9 +33,22 @@ def get_db_session_context():
         db_session.close()
 
 
+@contextmanager
 def get_db_session():
     """
-    Tạo mới session để dùng trong services.
-    Lưu ý: Cần gọi session.close() sau khi dùng xong.
+    Context manager để quản lý database session với auto-commit.
+    Usage:
+        with get_db_session() as session:
+            session.add(obj)
+            # Auto-commits on success, rollback on exception
     """
-    return SessionLocal()
+    db_session = SessionLocal()
+    try:
+        yield db_session
+        db_session.commit()
+    except Exception:
+        db_session.rollback()
+        raise
+    finally:
+        db_session.close()
+
