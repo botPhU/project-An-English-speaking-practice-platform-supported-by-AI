@@ -1,78 +1,84 @@
-# AESP - AI English Speaking Practice Platform
+# 🎤 AESP - AI English Speaking Practice Platform
 
-**Nền tảng luyện nói tiếng Anh có sự hỗ trợ của AI**
+**Nền tảng luyện nói tiếng Anh có sự hỗ trợ của AI và Mentor thực**
 
-## 📋 Giới thiệu
+## 📋 Giới Thiệu
 
-AESP là một ứng dụng web hỗ trợ người học tiếng Anh luyện tập kỹ năng nói trong môi trường không áp lực. AI đóng vai trò như một trợ lý hội thoại, cung cấp từ vựng, câu mẫu, và phản hồi phát âm ngay lập tức.
+AESP giúp người học tiếng Anh luyện tập kỹ năng nói trong môi trường không áp lực:
+- 🤖 **AI Conversation**: Luyện nói với AI, nhận feedback phát âm real-time
+- 👨‍🏫 **Mentor Support**: Được hướng dẫn bởi mentor chuyên nghiệp
+- 📊 **Progress Tracking**: Theo dõi tiến độ học tập chi tiết
+- 🏆 **Gamification**: Challenges, streaks, leaderboard
 
-## 👥 Đối tượng sử dụng
+## 👥 Vai Trò Người Dùng
 
 | Role | Mô tả |
 |------|-------|
-| **Admin** | Quản lý hệ thống, tài khoản, gói dịch vụ, thống kê |
-| **Mentor** | Đánh giá, hướng dẫn, và cung cấp feedback cho learner |
-| **Learner** | Luyện nói với AI, theo dõi tiến độ, tham gia challenges |
+| **Admin** | Quản lý hệ thống, phân công mentor, thống kê |
+| **Mentor** | Video call, đánh giá, feedback cho learner |
+| **Learner** | Luyện nói AI, chat mentor, tham gia community |
 
-## 📁 Cấu trúc dự án
+## 🛠️ Công Nghệ
 
-```
-AESP/
-├── Flask-CleanArchitecture/    # 🔧 BACKEND (Python/Flask)
-│   └── src/
-│       ├── api/                # API endpoints
-│       ├── domain/             # Business logic
-│       ├── infrastructure/     # Database, external services
-│       └── ...
-│
-└── frontend/                    # 🎨 FRONTEND (React + TypeScript)
-    └── src/
-        ├── pages/              # Giao diện theo role
-        │   ├── Admin/          # Dashboard, quản lý user/mentor/package
-        │   ├── Learner/        # Luyện nói, progress, challenges
-        │   ├── Mentor/         # Đánh giá, feedback, resources
-        │   └── Auth/           # Login/Register
-        ├── components/         # UI components
-        ├── services/           # API calls
-        └── types/              # TypeScript definitions
+| Layer | Stack |
+|-------|-------|
+| **Backend** | Python, Flask, SQLAlchemy, Socket.IO |
+| **Frontend** | React 18, TypeScript, Vite, TailwindCSS |
+| **Database** | MySQL (Railway cloud) |
+| **Video Call** | Jitsi Meet |
+| **AI** | Google Gemini API |
+
+## 🚀 Khởi Động Nhanh
+
+### 1-Click Start (Khuyên dùng)
+```batch
+.\FIX_AND_START.bat
 ```
 
-## 🛠️ Công nghệ sử dụng
+### Chạy Thủ Công
 
-### Backend
-- Python, Flask
-- PostgreSQL / MySQL
-- Azure, Aiven, Cloudinary
-
-### Frontend
-- React + TypeScript
-- Vite
-
-## 🚀 Cách chạy dự án (One-Click)
-
-> **Khuyên dùng:** Xem chi tiết tại [INSTRUCTION_RUN.md](INSTRUCTION_RUN.md)
-
-Chỉ cần chạy file:
-```bash
-.\start_all.bat
-```
-
-## ⚙️ Cách chạy thủ công 
-
-### Backend
+**Backend:**
 ```bash
 cd Flask-CleanArchitecture/src
-pip install -r requirements.txt
-python create_app.py
+..\..\.venv\Scripts\activate
+python app.py
 ```
 
-### Frontend
+**Frontend:**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
+## 📁 Cấu Trúc Dự Án
+
+```
+AESP/
+├── Flask-CleanArchitecture/   # Backend (Python/Flask)
+│   └── src/
+│       ├── api/controllers/   # API endpoints
+│       ├── services/          # Business logic  
+│       ├── infrastructure/    # Database models
+│       └── scripts/           # Migration SQL
+│
+├── frontend/                   # Frontend (React)
+│   └── src/
+│       ├── pages/             # Admin, Learner, Mentor views
+│       ├── components/        # UI components
+│       └── services/          # API calls
+│
+├── FIX_AND_START.bat          # 1-click starter
+├── TROUBLESHOOTING.md         # Hướng dẫn sửa lỗi
+└── DATABASE_SETUP.md          # Hướng dẫn cài database
+```
+
+## 🔗 Links
+
+- **Local Frontend**: http://localhost:5173
+- **Local Backend**: http://localhost:5000
+- **API Docs**: http://localhost:5000/docs
+
 ## 📄 License
 
-© 2024 AESP Teammm
+© 2026 AESP Team - FPT University

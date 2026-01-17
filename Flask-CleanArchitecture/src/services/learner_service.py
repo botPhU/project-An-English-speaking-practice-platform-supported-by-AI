@@ -805,7 +805,7 @@ class LearnerService:
             return {'error': str(e)}
     
     def update_booking(self, booking_id: int, data: dict):
-        """Update a booking status"""
+        """Update a booking status and notify learner"""
         try:
             with get_db_session() as session:
                 from infrastructure.models.mentor_booking_model import MentorBookingModel
@@ -813,6 +813,8 @@ class LearnerService:
                 booking = session.query(MentorBookingModel).get(booking_id)
                 if not booking:
                     return {'error': 'Booking not found'}
+                
+                old_status = booking.status
                 
                 if 'status' in data:
                     booking.status = data['status']
@@ -823,23 +825,127 @@ class LearnerService:
                 
                 booking.updated_at = datetime.now()
                 
-                return booking.to_dict()
+                # Get mentor and learner info for notification
+                mentor = session.query(UserModel).get(booking.mentor_id)
+                learner = session.query(UserModel).get(booking.learner_id)
+                mentor_name = mentor.full_name if mentor else 'Mentor'
+                
+                result = booking.to_dict()
+                result['mentor_name'] = mentor_name
+                result['learner_name'] = learner.full_name if learner else 'Learner'
+                
+                # Send notification to learner when status changes
+                if old_status != booking.status and booking.learner_id:
+                    from services.notification_service import NotificationService
+                    
+                    if booking.status == 'confirmed':
+                        # Auto-create MentorAssignment so learner appears in mentor's "Học viên của tôi"
+                        from infrastructure.models.mentor_assignment_model import MentorAssignmentModel
+                        
+                        # Check if assignment already exists for this mentor-learner pair
+                        existing_assignment = session.query(MentorAssignmentModel).filter(
+                            MentorAssignmentModel.mentor_id == booking.mentor_id,
+                            MentorAssignmentModel.learner_id == booking.learner_id
+                        ).first()
+                        
+                        if not existing_assignment:
+                            # Create new assignment
+                            new_assignment = MentorAssignmentModel(
+                                mentor_id=booking.mentor_id,
+                                learner_id=booking.learner_id,
+                                assigned_by=booking.mentor_id,  # Mentor assigns via booking confirmation
+                                status='active',
+                                notes=f"Assigned via booking #{booking_id}",
+                                assigned_at=datetime.now()
+                            )
+                            session.add(new_assignment)
+                            print(f"[BOOKING] Created MentorAssignment: mentor={booking.mentor_id}, learner={booking.learner_id}")
+                        elif existing_assignment.status != 'active':
+                            # Reactivate existing assignment
+                            existing_assignment.status = 'active'
+                            existing_assignment.updated_at = datetime.now()
+                            print(f"[BOOKING] Reactivated MentorAssignment: mentor={booking.mentor_id}, learner={booking.learner_id}")
+                        
+                        NotificationService.create_notification(
+                            user_id=booking.learner_id,
+                            title="✅ Lịch hẹn đã được xác nhận!",
+                            message=f"Mentor {mentor_name} đã xác nhận lịch hẹn vào {booking.scheduled_date} lúc {booking.scheduled_time}",
+                            notification_type="booking",
+                            action_url="/learner/dashboard"
+                        )
+                    elif booking.status == 'rejected':
+                        NotificationService.create_notification(
+                            user_id=booking.learner_id,
+                            title="❌ Lịch hẹn đã bị từ chối",
+                            message=f"Rất tiếc, mentor {mentor_name} không thể nhận lịch hẹn vào {booking.scheduled_date}. Vui lòng đặt lịch khác.",
+                            notification_type="booking",
+                            action_url="/learner/dashboard"
+                        )
+                    elif booking.status == 'completed':
+                        NotificationService.create_notification(
+                            user_id=booking.learner_id,
+                            title="🎉 Phiên học hoàn thành!",
+                            message=f"Phiên học với mentor {mentor_name} đã hoàn thành. Đánh giá mentor ngay!",
+                            notification_type="booking",
+                            action_url="/learner/dashboard"
+                        )
+                
+                return result
         except Exception as e:
             print(f"Update booking error: {e}")
             return {'error': str(e)}
+
     
     def get_bookings(self, user_id: int, role: str = 'learner'):
-        """Get all bookings for a user"""
+        """Get all bookings for a user with full learner/mentor profile info"""
         try:
             with get_db_session() as session:
                 from infrastructure.models.mentor_booking_model import MentorBookingModel
                 
                 if role == 'mentor':
-                    bookings = session.query(MentorBookingModel).filter_by(mentor_id=user_id).all()
+                    bookings = session.query(MentorBookingModel).filter_by(mentor_id=user_id).order_by(MentorBookingModel.created_at.desc()).all()
                 else:
-                    bookings = session.query(MentorBookingModel).filter_by(learner_id=user_id).all()
+                    bookings = session.query(MentorBookingModel).filter_by(learner_id=user_id).order_by(MentorBookingModel.created_at.desc()).all()
                 
-                return [b.to_dict() for b in bookings]
+                result = []
+                for b in bookings:
+                    booking_data = b.to_dict()
+                    
+                    # Add learner profile info for mentor view
+                    if role == 'mentor' and b.learner_id:
+                        learner = session.query(UserModel).get(b.learner_id)
+                        if learner:
+                            # Get learner progress
+                            progress = session.query(ProgressModel).filter_by(user_id=b.learner_id).first()
+                            
+                            booking_data['learner_email'] = learner.email
+                            booking_data['learner_avatar'] = learner.avatar_url or f'https://api.dicebear.com/7.x/avataaars/svg?seed={learner.user_name}'
+                            booking_data['learner_phone'] = learner.phone_number
+                            
+                            # Add progress info
+                            if progress:
+                                booking_data['learner_level'] = progress.current_level or 'beginner'
+                                booking_data['learner_total_sessions'] = progress.total_sessions or 0
+                                booking_data['learner_overall_score'] = progress.overall_score or 0
+                                booking_data['learner_current_streak'] = progress.current_streak or 0
+                            else:
+                                booking_data['learner_level'] = 'beginner'
+                                booking_data['learner_total_sessions'] = 0
+                                booking_data['learner_overall_score'] = 0
+                                booking_data['learner_current_streak'] = 0
+                    
+                    # Add mentor info for learner view
+                    if role == 'learner' and b.mentor_id:
+                        mentor = session.query(UserModel).get(b.mentor_id)
+                        if mentor:
+                            booking_data['mentor_email'] = mentor.email
+                            booking_data['mentor_avatar'] = mentor.avatar_url or f'https://api.dicebear.com/7.x/avataaars/svg?seed={mentor.user_name}'
+                            booking_data['mentor_specialty'] = mentor.specialty or mentor.description or 'General English'
+                    
+                    result.append(booking_data)
+                
+                return result
         except Exception as e:
             print(f"Get bookings error: {e}")
             return []
+

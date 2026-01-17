@@ -4,6 +4,7 @@ import { mentorService } from '../../services/mentorService';
 import MyLearnerCard from '../../components/MyLearnerCard';
 import { useAuth } from '../../context/AuthContext';
 import ErrorBoundary from '../../components/ErrorBoundary';
+import BookingRequestsModal from '../../components/mentor/BookingRequestsModal';
 
 interface DashboardStats {
     label: string;
@@ -36,9 +37,11 @@ export default function MentorDashboard() {
     const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([]);
     const [recentFeedback, setRecentFeedback] = useState<RecentFeedback[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showBookingModal, setShowBookingModal] = useState(false);
 
     const mentorId = Number(authUser?.id) || 0;
     const mentorName = authUser?.name || 'Mentor';
+
 
     const fetchDashboardData = useCallback(async () => {
         if (mentorId <= 0) return;
@@ -127,11 +130,26 @@ export default function MentorDashboard() {
             title="Tổng quan"
             icon="dashboard"
             actions={
-                <button className="hidden lg:flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
-                    <span className="truncate">Tạo phiên mới</span>
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => setShowBookingModal(true)}
+                        className="hidden lg:flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#3e4854] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#4e5a69] transition-colors"
+                    >
+                        <span className="truncate">Yêu cầu đặt lịch</span>
+                    </button>
+                    <button className="hidden lg:flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
+                        <span className="truncate">Tạo phiên mới</span>
+                    </button>
+                </div>
             }
         >
+            <BookingRequestsModal
+                mentorId={mentorId}
+                isOpen={showBookingModal}
+                onClose={() => setShowBookingModal(false)}
+                onBookingUpdate={fetchDashboardData}
+            />
+
             <div className="max-w-[1200px] mx-auto flex flex-col gap-6 pb-10">
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -14,6 +14,14 @@ export interface IncomingCallData {
     roomName: string;
 }
 
+export interface BookingUpdateData {
+    type: string;
+    booking_id: number;
+    status: string;
+    message: string;
+    booking: any;
+}
+
 class SocketService {
     private socket: Socket | null = null;
     private userId: string | null = null;
@@ -23,6 +31,8 @@ class SocketService {
     private callAcceptedCallback: ((data: { targetUserId: string; roomName: string }) => void) | null = null;
     private callDeclinedCallback: ((data: { targetUserId: string; reason: string }) => void) | null = null;
     private callFailedCallback: ((data: { targetUserId: string; reason: string }) => void) | null = null;
+    private bookingUpdateCallback: ((data: BookingUpdateData) => void) | null = null;
+    private newBookingCallback: ((data: any) => void) | null = null;
 
     connect(): Socket {
         if (this.socket?.connected) {
@@ -102,6 +112,24 @@ class SocketService {
             console.log('[SocketService] Call declined:', data);
             if (this.callDeclinedCallback) {
                 this.callDeclinedCallback(data);
+            }
+        });
+
+        // ============ BOOKING EVENTS ============
+
+        // New booking notification (for mentor)
+        this.socket.on('new_booking', (data: any) => {
+            console.log('[SocketService] New booking:', data);
+            if (this.newBookingCallback) {
+                this.newBookingCallback(data);
+            }
+        });
+
+        // Booking update notification (for learner)
+        this.socket.on('booking_update', (data: BookingUpdateData) => {
+            console.log('[SocketService] Booking update:', data);
+            if (this.bookingUpdateCallback) {
+                this.bookingUpdateCallback(data);
             }
         });
 
@@ -223,6 +251,24 @@ class SocketService {
     // Register callback for call failed
     onCallFailed(callback: (data: { targetUserId: string; reason: string }) => void): void {
         this.callFailedCallback = callback;
+    }
+
+    // ============ BOOKING METHODS ============
+
+    // Register callback for booking updates (for learner)
+    onBookingUpdate(callback: (data: BookingUpdateData) => void): void {
+        this.bookingUpdateCallback = callback;
+    }
+
+    // Register callback for new booking (for mentor)
+    onNewBooking(callback: (data: any) => void): void {
+        this.newBookingCallback = callback;
+    }
+
+    // Remove booking callbacks
+    removeBookingCallbacks(): void {
+        this.bookingUpdateCallback = null;
+        this.newBookingCallback = null;
     }
 
     // Remove call callbacks

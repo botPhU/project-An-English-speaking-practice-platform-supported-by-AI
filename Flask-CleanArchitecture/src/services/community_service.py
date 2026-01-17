@@ -6,8 +6,9 @@ from datetime import datetime
 from infrastructure.databases.mssql import get_db_session
 from infrastructure.models.user_model import UserModel
 from infrastructure.models.community_models import (
-    PeerInvitationModel, PeerSessionModel, ReviewModel, QuickMatchModel
+    PeerInvitationModel, PeerSessionModel, QuickMatchModel
 )
+from infrastructure.models.review_model import ReviewModel
 
 
 class CommunityService:

@@ -45,22 +45,7 @@ class PeerSessionModel(Base):
     participant2 = relationship('UserModel', foreign_keys=[participant2_id])
 
 
-class ReviewModel(Base):
-    """Model for reviews and ratings"""
-    __tablename__ = 'reviews'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    reviewer_id = Column(Integer, ForeignKey('flask_user.id'), nullable=False)
-    reviewed_id = Column(Integer, ForeignKey('flask_user.id'), nullable=False)
-    session_id = Column(Integer)  # Can be peer_session or mentor_booking
-    session_type = Column(String(50))  # 'peer' or 'mentor'
-    rating = Column(Integer)  # 1-5
-    comment = Column(Text)
-    is_anonymous = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.now)
-    
-    reviewer = relationship('UserModel', foreign_keys=[reviewer_id])
-    reviewed = relationship('UserModel', foreign_keys=[reviewed_id])
+# ReviewModel is now imported from .review_model
 
 
 class QuickMatchModel(Base):

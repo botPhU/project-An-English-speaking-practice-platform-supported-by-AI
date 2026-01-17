@@ -64,8 +64,8 @@ export const assignmentService = {
         return response.data;
     },
 
-    // Mentor endpoint
-    getMyLearner: async (mentorId: number): Promise<Assignment | null> => {
+    // Mentor endpoint - returns array of learners (1-to-many)
+    getMyLearner: async (mentorId: number): Promise<Assignment[]> => {
         const response = await api.get('/assignments/mentor/my-learner', {
             params: { mentor_id: mentorId }
         });
