@@ -78,7 +78,3 @@ AESP/
 - **Local Frontend**: http://localhost:5173
 - **Local Backend**: http://localhost:5000
 - **API Docs**: http://localhost:5000/docs
-
-## 📄 License
-
-© 2026 AESP Team - FPT University
