@@ -3,6 +3,8 @@ import LearnerLayout from '../../layouts/LearnerLayout';
 import { useAuth } from '../../context/AuthContext';
 import { learnerService } from '../../services/learnerService';
 import type { LearnerProfile } from '../../services/learnerService';
+import { AvatarUpload } from '../../components/common';
+import { fileService } from '../../services/fileService';
 
 interface FormData {
   full_name: string;
@@ -236,17 +238,19 @@ export default function Profile() {
           {/* Left Column - Profile Card */}
           <div className="lg:col-span-4 flex flex-col gap-6">
             <div className="bg-surface-dark rounded-xl p-6 border border-border-dark flex flex-col items-center text-center shadow-sm">
-              <div className="relative group cursor-pointer">
-                <div
-                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 border-4 border-background-dark"
-                  style={{
-                    backgroundImage: `url("${profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.username || 'Guest'}`}")`
-                  }}
-                />
-                <div className="absolute bottom-1 right-1 bg-primary text-white p-1.5 rounded-full shadow-lg border-2 border-background-dark flex items-center justify-center">
-                  <span className="material-symbols-outlined text-sm">edit</span>
-                </div>
-              </div>
+              <AvatarUpload
+                currentAvatar={profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.username || 'Guest'}`}
+                name={profile?.full_name || 'Learner'}
+                size="lg"
+                onUpload={async (file) => {
+                  const userId = authUser?.id ? parseInt(authUser.id, 10) : 0;
+                  const result = await fileService.uploadAvatar(file, userId);
+                  setProfile(prev => prev ? { ...prev, avatar: result.url } : null);
+                  updateUser({ avatar: result.url });
+                  return result.url;
+                }}
+                onError={(error) => setError(error)}
+              />
               <h2 className="mt-4 text-xl font-bold text-white">
                 {formData.full_name || profile?.full_name || 'Học viên'}
               </h2>

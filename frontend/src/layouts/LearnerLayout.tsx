@@ -15,6 +15,7 @@ interface LearnerLayoutProps {
 const navItems = [
     { name: 'Tổng quan', icon: 'dashboard', path: LEARNER_ROUTES.DASHBOARD, exact: true },
     { name: 'Nhập vai AI', icon: 'smart_toy', path: LEARNER_ROUTES.SPEAKING_PRACTICE, exact: false },
+    { name: 'Luyện phát âm', icon: 'mic', path: LEARNER_ROUTES.SPEAKING_DRILLS, exact: false },
     { name: 'Thử thách', icon: 'emoji_events', path: LEARNER_ROUTES.CHALLENGES, exact: false },
     { name: 'Cộng đồng', icon: 'groups', path: LEARNER_ROUTES.COMMUNITY, exact: false },
     { name: 'Tiến độ', icon: 'trending_up', path: LEARNER_ROUTES.PROGRESS, exact: false },

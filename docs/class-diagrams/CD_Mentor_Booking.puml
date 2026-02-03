@@ -1,0 +1,139 @@
+@startuml CD_Mentor_Booking
+skinparam backgroundColor white
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+title Class Diagram: Mentor Booking
+
+package "Frontend" {
+    class "LearnerService" as LearnerSvc {
+        +getMyMentor(learnerId)
+        +getBookingHistory(learnerId)
+        +createBooking(data)
+        +cancelBooking(bookingId)
+    }
+
+    class "MentorService" as MentorSvc {
+        +getBookingRequests(mentorId)
+        +confirmBooking(bookingId)
+        +rejectBooking(bookingId)
+        +completeBooking(bookingId)
+    }
+
+    class "SocketService" as SocketSvc {
+        +onNewBooking(callback)
+        +onBookingUpdate(callback)
+    }
+
+    class "BookingModal" as BookingModal <<Component>> {
+        -selectedDate: Date
+        -selectedTime: Time
+        -topic: string
+        -notes: string
+        +handleSubmit()
+    }
+}
+
+package "Backend API" {
+    class "LearnerController" as LearnerCtrl <<Blueprint>> {
+        +get_my_mentor(): GET
+        +get_bookings(): GET
+        +create_booking(): POST
+        +cancel_booking(): PUT
+    }
+
+    class "MentorController" as MentorCtrl <<Blueprint>> {
+        +get_booking_requests(): GET
+        +confirm_booking(): PUT
+        +reject_booking(): PUT
+        +complete_booking(): PUT
+    }
+
+    class "WebSocket" as WS <<SocketIO>> {
+        +notify_new_booking(mentor_id)
+        +notify_booking_update(learner_id)
+    }
+}
+
+package "Services" {
+    class "BookingService" as BookingSvc {
+        -db_session: Session
+        +create_booking(learner_id, mentor_id, data)
+        +get_learner_bookings(learner_id)
+        +get_mentor_bookings(mentor_id)
+        +update_status(booking_id, status)
+        +get_booking_by_id(booking_id)
+    }
+}
+
+package "Domain Models" {
+    class "MentorBookingModel" as Booking {
+        +id: Integer <<PK>>
+        +learner_id: Integer <<FK>>
+        +mentor_id: Integer <<FK>>
+        --
+        +scheduled_date: Date
+        +scheduled_time: Time
+        +duration_minutes: Integer
+        --
+        +topic: String
+        +notes: Text
+        --
+        +status: String
+        --
+        +created_at: DateTime
+        +updated_at: DateTime
+        +confirmed_at: DateTime
+        +completed_at: DateTime
+        --
+        +to_dict()
+    }
+
+    class "UserModel" as User {
+        +id: Integer <<PK>>
+        +user_name: String
+        +full_name: String
+        +email: String
+        +role: String
+    }
+
+    class "MentorAssignmentModel" as Assignment {
+        +id: Integer <<PK>>
+        +learner_id: Integer <<FK>>
+        +mentor_id: Integer <<FK>>
+        +assigned_at: DateTime
+        +status: String
+    }
+
+    enum "BookingStatus" as Status {
+        PENDING
+        CONFIRMED
+        COMPLETED
+        CANCELLED
+        REJECTED
+    }
+}
+
+' Relationships
+BookingModal --> LearnerSvc : uses
+LearnerSvc --> LearnerCtrl : HTTP calls
+MentorSvc --> MentorCtrl : HTTP calls
+
+LearnerCtrl --> BookingSvc : delegates
+MentorCtrl --> BookingSvc : delegates
+BookingSvc --> Booking : manages
+
+LearnerCtrl --> WS : notifies
+MentorCtrl --> WS : notifies
+WS --> SocketSvc : events
+
+Booking "n" --> "1" User : learner
+Booking "n" --> "1" User : mentor
+Booking --> Status : has
+
+Assignment "1" --> "1" User : learner
+Assignment "1" --> "1" User : mentor
+Assignment "1" --> "*" Booking : enables
+
+@enduml

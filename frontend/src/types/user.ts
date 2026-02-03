@@ -4,8 +4,9 @@ export interface User {
     email: string;
     name: string;
     role: 'admin' | 'learner' | 'mentor';
-    isActive: boolean;
-    createdAt: Date;
+    avatar?: string;
+    isActive?: boolean;
+    createdAt?: Date;
 }
 
 export interface Admin extends User {

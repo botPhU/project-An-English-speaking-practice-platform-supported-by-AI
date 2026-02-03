@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Auth/Login'
 import Register from './pages/Auth/Register'
 import UpdateProfile from './pages/Auth/UpdateProfile'
+import MentorApplication from './pages/Auth/MentorApplication'
 import AdminDashboard from './pages/Admin/Dashboard'
 import UserManagement from './pages/Admin/UserManagement'
 import MentorManagement from './pages/Admin/MentorManagement'
@@ -13,15 +14,17 @@ import PolicyManagement from './pages/Admin/PolicyManagement'
 import Reports from './pages/Admin/Reports'
 import AdminProfile from './pages/Admin/AdminProfile'
 import AdminSettings from './pages/Admin/settings'
+import MentorApplications from './pages/Admin/MentorApplications'
 // Learner Pages
 import LearnerDashboard from './pages/Learner/Dashboard'
 import Progress from './pages/Learner/Progress'
 import Packages from './pages/Learner/Packages'
 import LearnerProfile from './pages/Learner/Profile'
-import TopicSelection from './pages/Learner/TopicSelection'
 import Community from './pages/Learner/Community'
 import Challenges from './pages/Learner/Challenges'
 import AIPractice from './pages/Learner/AIPracticeImmersive'
+import PlacementTest from './pages/Learner/PlacementTest'
+import SpeakingDrills from './pages/Learner/SpeakingDrills'
 // Mentor Pages
 import MentorDashboard from './pages/Mentor/Dashboard'
 import MentorMessages from './pages/Mentor/MentorMessages'
@@ -48,6 +51,7 @@ function App() {
         <Route path={AUTH_ROUTES.LOGIN} element={<Login />} />
         <Route path={AUTH_ROUTES.REGISTER} element={<Register />} />
         <Route path={AUTH_ROUTES.COMPLETE_PROFILE} element={<UpdateProfile />} />
+        <Route path={AUTH_ROUTES.MENTOR_APPLICATION} element={<MentorApplication />} />
 
         {/* Admin Routes */}
         <Route path={ADMIN_ROUTES.DASHBOARD} element={<AdminDashboard />} />
@@ -60,6 +64,7 @@ function App() {
         <Route path={ADMIN_ROUTES.REPORTS} element={<Reports />} />
         <Route path={ADMIN_ROUTES.PROFILE} element={<AdminProfile />} />
         <Route path={ADMIN_ROUTES.SETTINGS} element={<AdminSettings />} />
+        <Route path={ADMIN_ROUTES.MENTOR_APPLICATIONS} element={<MentorApplications />} />
 
         {/* Learner Routes - Aligned with Use Case Diagram */}
         <Route path={LEARNER_ROUTES.DASHBOARD} element={<LearnerDashboard />} />
@@ -70,6 +75,8 @@ function App() {
         <Route path={LEARNER_ROUTES.PROGRESS} element={<Progress />} />
         <Route path={LEARNER_ROUTES.PACKAGES} element={<Packages />} />
         <Route path={LEARNER_ROUTES.PROFILE} element={<LearnerProfile />} />
+        <Route path={LEARNER_ROUTES.PLACEMENT_TEST} element={<PlacementTest />} />
+        <Route path={LEARNER_ROUTES.SPEAKING_DRILLS} element={<SpeakingDrills />} />
 
         {/* Mentor Routes */}
         <Route path={MENTOR_ROUTES.DASHBOARD} element={<MentorDashboard />} />

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import MentorLayout from '../../layouts/MentorLayout';
 import { mentorService } from '../../services/mentorService';
 import { useAuth } from '../../context/AuthContext';
+import { AvatarUpload } from '../../components/common';
+import { fileService } from '../../services/fileService';
 
 interface MentorProfile {
     id: number;
@@ -164,21 +166,18 @@ export default function MentorProfile() {
                                     {loading ? (
                                         <div className="size-24 rounded-full bg-[#3e4854] animate-pulse border-4 border-[#283039]"></div>
                                     ) : (
-                                        <div
-                                            className="size-24 rounded-full border-4 border-[#283039] bg-center bg-cover"
-                                            style={{
-                                                backgroundImage: profile?.avatar
-                                                    ? `url("${profile.avatar}")`
-                                                    : 'url("https://api.dicebear.com/7.x/avataaars/svg?seed=Mentor")'
+                                        <AvatarUpload
+                                            currentAvatar={profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=Mentor`}
+                                            name={`${profile?.firstName || ''} ${profile?.lastName || ''}`}
+                                            size="lg"
+                                            onUpload={async (file) => {
+                                                const result = await fileService.uploadAvatar(file, mentorId);
+                                                setProfile(prev => prev ? { ...prev, avatar: result.url } : null);
+                                                return result.url;
                                             }}
+                                            onError={(error) => console.error('Upload error:', error)}
                                         />
                                     )}
-                                    <button
-                                        className="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full hover:bg-primary/80 border-2 border-[#283039] flex items-center justify-center transition-colors"
-                                        title="Đổi ảnh đại diện"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">photo_camera</span>
-                                    </button>
                                 </div>
                                 {loading ? (
                                     <div className="space-y-2">
