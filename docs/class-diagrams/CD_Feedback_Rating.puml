@@ -1,0 +1,165 @@
+@startuml CD_Feedback_Rating
+skinparam backgroundColor white
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+title Class Diagram: Feedback & Rating System
+
+package "Frontend" {
+    class "FeedbackService" as FbSvc {
+        +createFeedback(data)
+        +getLearnerFeedbacks(learnerId)
+        +getMentorSentFeedbacks(mentorId)
+        +getLearnerProgress(learnerId)
+    }
+
+    class "MentorService" as MentorSvc {
+        +submitReview(data)
+        +getMentorReviews(mentorId)
+    }
+
+    class "FeedbackForm" as FeedbackForm <<Component>> {
+        -pronunciationScore: number
+        -grammarScore: number
+        -vocabularyScore: number
+        -fluencyScore: number
+        -strengths: string
+        -improvements: string
+        -recommendations: string
+        +handleSubmit()
+        +calculateOverall()
+    }
+
+    class "RatingModal" as RatingModal <<Component>> {
+        -rating: number
+        -comment: string
+        +handleSubmit()
+    }
+
+    class "ProgressDashboard" as ProgressDash <<Component>> {
+        -skillAverages: object
+        -recentSessions: array
+        -recentFeedbacks: array
+        +renderSkillChart()
+    }
+}
+
+package "Backend API" {
+    class "FeedbackController" as FbCtrl <<Blueprint>> {
+        +create_feedback(): POST /api/feedback
+        +get_learner_feedbacks(): GET
+        +get_mentor_sent_feedbacks(): GET
+        +get_learner_progress(): GET
+    }
+
+    class "MentorController" as MentorCtrl <<Blueprint>> {
+        +submit_review(): POST /api/mentor/reviews
+        +get_mentor_reviews(): GET
+    }
+}
+
+package "Services" {
+    class "FeedbackService" as FbSvcBE {
+        +create_feedback(mentor_id, learner_id, data)
+        +get_feedbacks_by_learner(learner_id)
+        +get_feedbacks_by_mentor(mentor_id)
+        +calculate_learner_progress(learner_id)
+    }
+}
+
+package "Domain Models" {
+    class "MentorFeedbackModel" as Feedback {
+        +id: Integer <<PK>>
+        +mentor_id: Integer <<FK>>
+        +learner_id: Integer <<FK>>
+        +session_id: Integer <<FK>>
+        --
+        +pronunciation_score: Integer
+        +grammar_score: Integer
+        +vocabulary_score: Integer
+        +fluency_score: Integer
+        +overall_score: Integer
+        --
+        +strengths: Text
+        +improvements: Text
+        +recommendations: Text
+        --
+        +created_at: DateTime
+        +updated_at: DateTime
+        --
+        +to_dict()
+    }
+
+    class "ReviewModel" as Review {
+        +id: Integer <<PK>>
+        +reviewer_id: Integer <<FK>>
+        +reviewed_id: Integer <<FK>>
+        +learner_id: Integer <<FK>>
+        +mentor_id: Integer <<FK>>
+        --
+        +session_id: Integer
+        +session_type: String
+        +booking_id: Integer <<FK>>
+        --
+        +rating: Integer
+        +comment: Text
+        +is_anonymous: Boolean
+        +created_at: DateTime
+        --
+        +to_dict()
+    }
+
+    class "LearnerProgress" as Progress <<DTO>> {
+        +learner_id: Integer
+        +total_sessions: Integer
+        +recent_sessions: Array
+        +skill_averages: Object
+        +total_feedbacks: Integer
+        +recent_feedbacks: Array
+        +current_level: String
+        +total_practice_minutes: Integer
+        +streak_days: Integer
+    }
+
+    class "UserModel" as User {
+        +id: Integer <<PK>>
+        +user_name: String
+        +full_name: String
+        +avatar_url: String
+        +average_rating: Float
+        +review_count: Integer
+    }
+
+    class "MentorBookingModel" as Booking {
+        +id: Integer <<PK>>
+        +status: String
+    }
+}
+
+' Relationships
+FeedbackForm --> FbSvc : uses
+RatingModal --> MentorSvc : uses
+ProgressDash --> FbSvc : uses
+
+FbSvc --> FbCtrl : HTTP calls
+MentorSvc --> MentorCtrl : HTTP calls
+
+FbCtrl --> FbSvcBE : delegates
+FbSvcBE --> Feedback : manages
+
+MentorCtrl --> Review : manages
+
+Feedback "n" --> "1" User : mentor
+Feedback "n" --> "1" User : learner
+
+Review "n" --> "1" User : reviewer
+Review "n" --> "1" User : reviewed
+Review "n" --> "0..1" Booking : references
+
+Progress --> Feedback : aggregates
+Progress --> User : for learner
+
+User "1" --> "*" Review : receives ratings
+
+@enduml

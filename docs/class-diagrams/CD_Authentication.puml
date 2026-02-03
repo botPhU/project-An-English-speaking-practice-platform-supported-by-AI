@@ -1,0 +1,138 @@
+@startuml CD_Authentication
+skinparam backgroundColor white
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+title Class Diagram: Authentication System
+
+package "Frontend" {
+    class "AuthService" as AuthSvc {
+        +login(user_name, password)
+        +register(data)
+        +logout()
+        +refreshToken(refresh_token)
+        +getCurrentUser()
+        +changePassword(old, new)
+    }
+
+    class "AuthContext" as AuthCtx <<Context>> {
+        -user: User
+        -token: string
+        -isAuthenticated: boolean
+        +login(user, token)
+        +logout()
+        +checkAuth()
+    }
+
+    class "Login" as LoginPage <<Component>> {
+        -userName: string
+        -password: string
+        -loading: boolean
+        -error: string
+        +handleSubmit()
+    }
+
+    class "Register" as RegisterPage <<Component>> {
+        -userName: string
+        -email: string
+        -password: string
+        -confirmPassword: string
+        +handleSubmit()
+        -validate()
+    }
+}
+
+package "Backend API" {
+    class "AuthController" as AuthCtrl <<Blueprint>> {
+        +register(): POST /api/auth/register
+        +login(): POST /api/auth/login
+        +logout(): POST /api/auth/logout
+        +refresh_token(): POST /api/auth/refresh
+        +get_current_user(): GET /api/auth/me
+        +change_password(): POST
+    }
+}
+
+package "Services" {
+    class "AuthService" as AuthSvcBE <<Service>> {
+        +hash_password(password): string
+        +verify_password(password, hash): bool
+        +create_access_token(user_id, role): tokens
+        +refresh_access_token(refresh_token): tokens
+        +get_current_user(token): user_data
+        +revoke_token(token)
+    }
+
+    class "WebSocket" as WS <<SocketIO>> {
+        +notify_user_login(user_id)
+        +notify_user_logout(user_id)
+        +broadcast_user_status(user_id, status)
+    }
+}
+
+package "Domain Models" {
+    class "UserModel" as User {
+        +id: Integer <<PK>>
+        +user_name: String
+        +password: String
+        +email: String
+        +full_name: String
+        +role: String
+        +status: Boolean
+        +created_at: DateTime
+        +updated_at: DateTime
+        +last_login: DateTime
+        --
+        +phone_number: String
+        +date_of_birth: Date
+        +avatar_url: String
+        +bio: Text
+        --
+        +profile_completed: Boolean
+    }
+
+    class "ProgressModel" as Progress {
+        +id: Integer <<PK>>
+        +user_id: Integer <<FK>>
+        +current_streak: Integer
+        +longest_streak: Integer
+        +updated_at: DateTime
+    }
+
+    enum "UserRole" as Role {
+        ADMIN
+        MENTOR
+        LEARNER
+    }
+}
+
+package "Security" {
+    class "JWT" as JWT <<Library>> {
+        +encode(payload, secret)
+        +decode(token, secret)
+    }
+
+    class "Bcrypt" as Bcrypt <<Library>> {
+        +generate_password_hash()
+        +check_password_hash()
+    }
+}
+
+' Relationships
+LoginPage --> AuthSvc : uses
+RegisterPage --> AuthSvc : uses
+AuthSvc --> AuthCtrl : HTTP calls
+
+AuthCtrl --> AuthSvcBE : delegates
+AuthSvcBE --> JWT : token operations
+AuthSvcBE --> Bcrypt : password hashing
+AuthCtrl --> WS : broadcasts status
+
+AuthCtrl --> User : queries
+User "1" --> "1" Progress : has
+User --> Role : has
+
+AuthSvc --> AuthCtx : updates
+
+@enduml

@@ -25,6 +25,14 @@ from api.controllers.message_controller import message_bp
 from api.controllers.assignment_controller import assignment_bp
 from api.controllers.feedback_controller import feedback_bp
 from api.controllers.video_controller import video_bp
+from api.controllers.feedback_moderation_controller import feedback_moderation_bp
+from api.controllers.file_controller import file_bp
+from api.controllers.leaderboard_controller import leaderboard_bp
+from api.controllers.badge_controller import badge_bp
+from api.controllers.study_buddy_controller import study_buddy_bp
+from api.controllers.availability_controller import availability_bp
+from api.controllers.placement_test_controller import placement_test_bp
+from api.controllers.mentor_application_controller import mentor_application_bp
 
 
 def register_routes(app):
@@ -54,3 +62,11 @@ def register_routes(app):
     app.register_blueprint(assignment_bp)    # /api/assignments/*
     app.register_blueprint(feedback_bp)      # /api/feedback/*
     app.register_blueprint(video_bp)         # /api/video/*
+    app.register_blueprint(feedback_moderation_bp)  # /api/admin/feedbacks/*
+    app.register_blueprint(file_bp)          # /api/files/*
+    app.register_blueprint(leaderboard_bp)   # /api/leaderboard/*
+    app.register_blueprint(badge_bp)         # /api/badges/*
+    app.register_blueprint(study_buddy_bp)   # /api/study-buddy/*
+    app.register_blueprint(availability_bp)  # /api/mentor/availability/*
+    app.register_blueprint(placement_test_bp)  # /api/placement-test/*
+    app.register_blueprint(mentor_application_bp)  # /api/mentor-application/*

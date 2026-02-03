@@ -168,6 +168,32 @@ def get_user_growth():
     data = admin_service.get_user_growth_data()
     return jsonify(data), 200
 
+@bp.route('/dashboard/system-status', methods=['GET'])
+def get_system_status():
+    """Get system status for dashboard"""
+    status = admin_service.get_system_status()
+    return jsonify(status), 200
+
+@bp.route('/dashboard/revenue-by-package', methods=['GET'])
+def get_revenue_by_package():
+    """Get revenue breakdown by package"""
+    data = admin_service.get_revenue_by_package()
+    return jsonify(data), 200
+
+@bp.route('/dashboard/pending-actions', methods=['GET'])
+def get_pending_actions():
+    """Get pending actions for dashboard"""
+    limit = request.args.get('limit', 5, type=int)
+    actions = admin_service.get_pending_actions(limit=limit)
+    return jsonify(actions), 200
+
+@bp.route('/dashboard/ai-usage', methods=['GET'])
+def get_ai_usage_stats():
+    """Get AI usage statistics"""
+    period = request.args.get('period', '24h')
+    stats = admin_service.get_ai_usage_stats(period=period)
+    return jsonify(stats), 200
+
 # --- Admin Profile Endpoints ---
 
 @bp.route('/profile', methods=['GET'])

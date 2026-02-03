@@ -7,6 +7,10 @@ export const adminService = {
     getRecentActivities: (limit: number = 10) => api.get(`/admin/dashboard/activities?limit=${limit}`),
     getRevenueChart: (period: string = '30days') => api.get(`/admin/dashboard/revenue-chart?period=${period}`),
     getUserGrowth: () => api.get('/admin/dashboard/user-growth'),
+    getSystemStatus: () => api.get('/admin/dashboard/system-status'),
+    getRevenueByPackage: () => api.get('/admin/dashboard/revenue-by-package'),
+    getPendingActions: (limit: number = 5) => api.get(`/admin/dashboard/pending-actions?limit=${limit}`),
+    getAIUsageStats: (period: string = '24h') => api.get(`/admin/dashboard/ai-usage?period=${period}`),
 
     // User Management
     getUsers: (params?: { role?: string; status?: string; search?: string; page?: number; per_page?: number }) => {
@@ -56,8 +60,10 @@ export const adminService = {
         if (params?.status && params.status !== 'all') queryParams.append('status', params.status);
         return api.get(`/admin/feedbacks?${queryParams.toString()}`);
     },
+    getFeedbackStats: () => api.get('/admin/feedbacks/stats'),
     moderateFeedback: (feedbackId: string, action: 'approve' | 'reject') =>
         api.put(`/admin/feedbacks/${feedbackId}`, { action }),
+    deleteFeedback: (feedbackId: string) => api.delete(`/admin/feedbacks/${feedbackId}`),
 
     // Learner Support
     getSupportTickets: (params?: { status?: string; priority?: string }) => {

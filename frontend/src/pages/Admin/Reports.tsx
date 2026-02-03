@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/layout';
 import { adminService } from '../../services/adminService';
+import {
+    LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 
 interface ReportStats {
     totalRevenue: { value: string; change: string; changeType: 'up' | 'down' };
@@ -16,10 +20,20 @@ interface PackageDistribution {
     percentage: number;
 }
 
+interface ChartDataPoint {
+    name: string;
+    value: number;
+    revenue?: number;
+    users?: number;
+}
+
+const COLORS = ['#0ea5e9', '#8b5cf6', '#f97316', '#0bda5b'];
+
 const Reports: React.FC = () => {
     const [stats, setStats] = useState<ReportStats | null>(null);
     const [packageDistribution, setPackageDistribution] = useState<PackageDistribution[]>([]);
-    const [chartData, setChartData] = useState<number[]>([]);
+    const [revenueData, setRevenueData] = useState<ChartDataPoint[]>([]);
+    const [userGrowthData, setUserGrowthData] = useState<ChartDataPoint[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [period, setPeriod] = useState('30days');
@@ -31,62 +45,86 @@ const Reports: React.FC = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const response = await adminService.getReports();
+            const [reportsResponse, revenueResponse, userGrowthResponse, revenueByPackageResponse] = await Promise.all([
+                adminService.getReports().catch(() => ({ data: {} })),
+                adminService.getRevenueChart(period).catch(() => ({ data: [] })),
+                adminService.getUserGrowth().catch(() => ({ data: [] })),
+                adminService.getRevenueByPackage().catch(() => ({ data: [] }))
+            ]);
 
-            const data = response.data || {};
+            const data = reportsResponse.data || {};
             setStats({
                 totalRevenue: {
-                    value: data.total_revenue ? `₫${(data.total_revenue / 1000000000).toFixed(2)} Tỷ` : 'N/A',
-                    change: data.revenue_change || 'Chưa có dữ liệu',
+                    value: data.total_revenue ? `$${(data.total_revenue / 1000).toFixed(1)}K` : '$0',
+                    change: data.revenue_change || '+0%',
                     changeType: (data.revenue_change || '+0%').startsWith('+') ? 'up' : 'down'
                 },
                 activeUsers: {
                     value: data.active_users != null ? data.active_users.toLocaleString() : '0',
-                    change: data.users_change || 'Chưa có dữ liệu',
+                    change: data.users_change || '+0%',
                     changeType: (data.users_change || '+0%').startsWith('+') ? 'up' : 'down'
                 },
                 newSubscriptions: {
                     value: data.new_subscriptions != null ? data.new_subscriptions.toLocaleString() : '0',
-                    change: data.subscriptions_change || 'Chưa có dữ liệu',
+                    change: data.subscriptions_change || '+0%',
                     changeType: (data.subscriptions_change || '+0%').startsWith('+') ? 'up' : 'down'
                 },
                 avgSessionTime: {
-                    value: data.avg_session_time || 'N/A',
-                    change: data.session_change || 'Chưa có dữ liệu',
+                    value: data.avg_session_time || '0m',
+                    change: data.session_change || '+0%',
                     changeType: (data.session_change || '+0%').startsWith('+') ? 'up' : 'down'
                 }
             });
 
-            // Set package distribution from API or empty array
-            const colors = ['bg-gray-500', 'bg-blue-500', 'bg-purple-500', 'bg-primary'];
-            const pkgData = data.package_distribution || [];
+            // Revenue chart data
+            const revenueChartData = (revenueResponse.data || []).map((item: any) => ({
+                name: item.week || item.date || 'N/A',
+                revenue: item.revenue || 0
+            }));
+            setRevenueData(revenueChartData);
+
+            // User growth data
+            const userChartData = (userGrowthResponse.data || []).map((item: any) => ({
+                name: item.date || 'N/A',
+                users: item.count || 0
+            }));
+            setUserGrowthData(userChartData);
+
+            // Package distribution from revenue by package
+            const pkgData = revenueByPackageResponse.data || [];
             setPackageDistribution(pkgData.map((pkg: any, i: number) => ({
-                name: pkg.name || 'Unknown',
-                count: pkg.count || 0,
-                color: colors[i % colors.length],
+                name: pkg.name || 'Package',
+                count: pkg.amount || 0,
+                color: COLORS[i % COLORS.length],
                 percentage: pkg.percentage || 0
             })));
-
-            // Set chart data from API or empty array
-            setChartData(data.user_growth || []);
 
             setError(null);
         } catch (err) {
             console.error('Error fetching reports:', err);
             setError('Không thể tải báo cáo');
-            // Set empty stats instead of mock data
             setStats({
-                totalRevenue: { value: 'N/A', change: 'Chưa có dữ liệu', changeType: 'up' },
-                activeUsers: { value: '0', change: 'Chưa có dữ liệu', changeType: 'up' },
-                newSubscriptions: { value: '0', change: 'Chưa có dữ liệu', changeType: 'up' },
-                avgSessionTime: { value: 'N/A', change: 'Chưa có dữ liệu', changeType: 'up' }
+                totalRevenue: { value: '$0', change: '+0%', changeType: 'up' },
+                activeUsers: { value: '0', change: '+0%', changeType: 'up' },
+                newSubscriptions: { value: '0', change: '+0%', changeType: 'up' },
+                avgSessionTime: { value: '0m', change: '+0%', changeType: 'up' }
             });
             setPackageDistribution([]);
-            setChartData([]);
+            setRevenueData([]);
+            setUserGrowthData([]);
         } finally {
             setLoading(false);
         }
     };
+
+    const formatCurrency = (value: number) => `$${(value / 1000).toFixed(1)}K`;
+
+    // Prepare pie chart data
+    const pieData = packageDistribution.map((pkg, idx) => ({
+        name: pkg.name,
+        value: pkg.count,
+        color: COLORS[idx % COLORS.length]
+    }));
 
     return (
         <AdminLayout
@@ -218,21 +256,49 @@ const Reports: React.FC = () => {
                                 <p className="text-[#9dabb9] text-sm">Biểu đồ doanh thu {period === '30days' ? '30 ngày qua' : period}</p>
                             </div>
                         </div>
-                        <div className="h-64 flex items-center justify-center">
-                            <svg className="w-full h-full" fill="none" viewBox="0 0 400 200">
-                                <defs>
-                                    <linearGradient id="revenueGradient" x1={0} x2={0} y1={0} y2={1}>
-                                        <stop offset="0%" stopColor="#2b8cee" stopOpacity="0.3" />
-                                        <stop offset="100%" stopColor="#2b8cee" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <line stroke="#3e4854" strokeWidth={1} x1={0} x2={400} y1={199} y2={199} />
-                                <line stroke="#3e4854" strokeDasharray="4 4" strokeWidth={1} x1={0} x2={400} y1={150} y2={150} />
-                                <line stroke="#3e4854" strokeDasharray="4 4" strokeWidth={1} x1={0} x2={400} y1={100} y2={100} />
-                                <line stroke="#3e4854" strokeDasharray="4 4" strokeWidth={1} x1={0} x2={400} y1={50} y2={50} />
-                                <path d="M0 150 Q 50 120, 100 140 T 200 100 T 300 80 T 400 60 V 200 H 0 Z" fill="url(#revenueGradient)" />
-                                <path d="M0 150 Q 50 120, 100 140 T 200 100 T 300 80 T 400 60" fill="none" stroke="#2b8cee" strokeWidth={2} />
-                            </svg>
+                        <div className="h-64">
+                            {loading ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                </div>
+                            ) : revenueData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#3e4854" />
+                                        <XAxis dataKey="name" stroke="#9dabb9" fontSize={12} />
+                                        <YAxis stroke="#9dabb9" fontSize={12} tickFormatter={(v) => `$${v}`} />
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: '#1a222a',
+                                                border: '1px solid #3e4854',
+                                                borderRadius: '8px',
+                                                color: '#fff'
+                                            }}
+                                            formatter={(value: number) => [`$${value.toLocaleString()}`, 'Doanh thu']}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="revenue"
+                                            stroke="#0ea5e9"
+                                            fillOpacity={1}
+                                            fill="url(#revenueGradient)"
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-[#9dabb9]">
+                                    <div className="text-center">
+                                        <span className="material-symbols-outlined text-4xl opacity-30 mb-2">show_chart</span>
+                                        <p>Chưa có dữ liệu doanh thu</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -241,52 +307,127 @@ const Reports: React.FC = () => {
                         <div className="flex justify-between items-center mb-6">
                             <div>
                                 <h3 className="text-white text-lg font-bold">Tăng trưởng người dùng</h3>
-                                <p className="text-[#9dabb9] text-sm">Số lượng đăng ký mới</p>
+                                <p className="text-[#9dabb9] text-sm">Số lượng đăng ký mới theo tuần</p>
                             </div>
                         </div>
-                        <div className="h-64 flex items-end gap-2 px-4">
-                            {chartData.length > 0 ? (
-                                chartData.map((height, i) => (
-                                    <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                                        <div
-                                            className="w-full bg-primary/80 rounded-t-lg transition-all hover:bg-primary"
-                                            style={{ height: `${Math.min(height * 2, 180)}px` }}
+                        <div className="h-64">
+                            {loading ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                </div>
+                            ) : userGrowthData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={userGrowthData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#3e4854" />
+                                        <XAxis dataKey="name" stroke="#9dabb9" fontSize={12} />
+                                        <YAxis stroke="#9dabb9" fontSize={12} />
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: '#1a222a',
+                                                border: '1px solid #3e4854',
+                                                borderRadius: '8px',
+                                                color: '#fff'
+                                            }}
+                                            formatter={(value: number) => [value.toLocaleString(), 'Người dùng']}
                                         />
-                                        <span className="text-xs text-[#9dabb9]">{i + 1}</span>
-                                    </div>
-                                ))
+                                        <Bar dataKey="users" fill="#0bda5b" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
                             ) : (
-                                <div className="flex-1 flex items-center justify-center text-[#9dabb9]">
-                                    <p>Chưa có dữ liệu biểu đồ</p>
+                                <div className="flex items-center justify-center h-full text-[#9dabb9]">
+                                    <div className="text-center">
+                                        <span className="material-symbols-outlined text-4xl opacity-30 mb-2">bar_chart</span>
+                                        <p>Chưa có dữ liệu người dùng</p>
+                                    </div>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Package Distribution */}
+                {/* Package Distribution with Pie Chart */}
                 <div className="rounded-xl bg-[#283039] border border-[#3b4754] p-6">
-                    <h3 className="text-white text-lg font-bold mb-6">Phân bổ gói đăng ký</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {packageDistribution.length > 0 ? (
-                            packageDistribution.map((pkg) => (
-                                <div key={pkg.name} className="p-4 bg-[#1a222a] rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-white font-medium">{pkg.name}</span>
-                                        <span className="text-[#9dabb9] text-sm">{pkg.percentage}%</span>
-                                    </div>
-                                    <p className="text-2xl font-bold text-white mb-2">{pkg.count.toLocaleString()}</p>
-                                    <div className="w-full h-2 bg-[#3b4754] rounded-full overflow-hidden">
-                                        <div className={`h-full ${pkg.color} rounded-full`} style={{ width: `${pkg.percentage}%` }} />
+                    <h3 className="text-white text-lg font-bold mb-6">Phân bổ doanh thu theo gói</h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Pie Chart */}
+                        <div className="h-64">
+                            {loading ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                </div>
+                            ) : pieData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={pieData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={100}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                            labelLine={false}
+                                        >
+                                            {pieData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: '#1a222a',
+                                                border: '1px solid #3e4854',
+                                                borderRadius: '8px',
+                                                color: '#fff'
+                                            }}
+                                            formatter={(value: number) => [`$${value.toLocaleString()}`, 'Doanh thu']}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-[#9dabb9]">
+                                    <div className="text-center">
+                                        <span className="material-symbols-outlined text-4xl opacity-30 mb-2">pie_chart</span>
+                                        <p>Chưa có dữ liệu phân bổ</p>
                                     </div>
                                 </div>
-                            ))
-                        ) : (
-                            <div className="col-span-4 p-8 text-center text-[#9dabb9]">
-                                <span className="material-symbols-outlined text-4xl opacity-30 mb-2">inventory_2</span>
-                                <p>Chưa có dữ liệu phân bổ gói đăng ký</p>
-                            </div>
-                        )}
+                            )}
+                        </div>
+
+                        {/* Package Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {packageDistribution.length > 0 ? (
+                                packageDistribution.map((pkg, idx) => (
+                                    <div key={pkg.name} className="p-4 bg-[#1a222a] rounded-lg border border-[#3e4854]/50">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <span
+                                                className="size-4 rounded-full"
+                                                style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                                            />
+                                            <span className="text-white font-medium">{pkg.name}</span>
+                                        </div>
+                                        <p className="text-2xl font-bold text-white mb-1">${(pkg.count).toLocaleString()}</p>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 h-1.5 bg-[#3b4754] rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full"
+                                                    style={{
+                                                        width: `${pkg.percentage}%`,
+                                                        backgroundColor: COLORS[idx % COLORS.length]
+                                                    }}
+                                                />
+                                            </div>
+                                            <span className="text-xs text-[#9dabb9]">{pkg.percentage}%</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="col-span-2 p-8 text-center text-[#9dabb9]">
+                                    <span className="material-symbols-outlined text-4xl opacity-30 mb-2">inventory_2</span>
+                                    <p>Chưa có dữ liệu phân bổ gói</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

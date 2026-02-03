@@ -302,7 +302,7 @@ const Assessment: React.FC = () => {
 
                         <div className="pt-8 border-t border-border-dark flex flex-col md:flex-row gap-4 justify-center">
                             <button
-                                onClick={() => window.location.href = '/learner/dashboard'}
+                                onClick={() => window.location.href = '/dashboard'}
                                 className="px-8 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl transition-all"
                             >
                                 Về Bảng điều khiển

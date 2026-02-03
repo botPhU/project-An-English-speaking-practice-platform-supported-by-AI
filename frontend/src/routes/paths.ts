@@ -11,6 +11,7 @@ export const ADMIN_ROUTES = {
     REPORTS: '/admin/reports',
     PROFILE: '/admin/profile',
     SETTINGS: '/admin/settings',
+    MENTOR_APPLICATIONS: '/admin/mentor-applications',  // Approve mentor applications
 };
 
 // Learner Routes - Aligned with Use Case Diagram
@@ -23,6 +24,8 @@ export const LEARNER_ROUTES = {
     COMMUNITY: '/community',    // Practice with Others, Reviews, Mentors
     PROGRESS: '/progress',      // Performance Reports, Tracking, AI Feedback, Scoring
     PACKAGES: '/packages',
+    PLACEMENT_TEST: '/placement-test',  // Level assessment test
+    SPEAKING_DRILLS: '/speaking-drills',  // AI Speaking practice
 };
 
 // Mentor Routes
@@ -49,4 +52,5 @@ export const AUTH_ROUTES = {
     REGISTER: '/register',
     FORGOT_PASSWORD: '/forgot-password',
     COMPLETE_PROFILE: '/complete-profile',
+    MENTOR_APPLICATION: '/apply-mentor',  // Mentor application form
 };

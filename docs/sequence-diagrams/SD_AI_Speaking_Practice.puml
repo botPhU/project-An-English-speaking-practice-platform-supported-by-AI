@@ -1,0 +1,165 @@
+@startuml SD_AI_Speaking_Practice
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: AI Speaking Practice
+
+actor "Learner" as Learner
+participant "Frontend\n(AIPractice.tsx)" as FE
+participant "PracticeService" as PracticeSvc
+participant "Flask API\n(/api/practice)" as API
+participant "PracticeSession\nService" as SessionSvc
+participant "AIService\n(Gemini)" as AISvc
+database "MySQL\nDatabase" as DB
+participant "Web Speech API" as WebSpeech
+
+== 1. Get Vocabulary (Optional) ==
+
+Learner -> FE: Select topic\n(e.g., Travel)
+activate FE
+
+FE -> PracticeSvc: getVocabulary(topic)
+activate PracticeSvc
+
+PracticeSvc -> API: GET /api/practice/vocabulary/{topic}
+activate API
+
+API -> AISvc: get_vocabulary_suggestions(topic)
+activate AISvc
+AISvc -> AISvc: Load from\nvocabulary_database.json
+AISvc --> API: VocabularyResponse
+deactivate AISvc
+
+API --> PracticeSvc: {topic, vocabulary:\n{basic, intermediate, advanced}}
+deactivate API
+
+PracticeSvc --> FE: Vocabulary list
+deactivate PracticeSvc
+
+FE --> Learner: Display vocabulary\nfor reference
+
+== 2. Start Practice Session ==
+
+Learner -> FE: Click "Start Practice"
+FE -> PracticeSvc: startSession(userId,\ntopic, scenario)
+activate PracticeSvc
+
+PracticeSvc -> API: POST /api/practice/start\n{user_id, topic, scenario}
+activate API
+
+API -> SessionSvc: start_session(user_id, topic)
+activate SessionSvc
+
+SessionSvc -> DB: INSERT INTO practice_sessions\n(user_id, topic, session_type,\nstarted_at)
+activate DB
+DB --> SessionSvc: session.id
+deactivate DB
+
+SessionSvc --> API: PracticeSession object
+deactivate SessionSvc
+
+API --> PracticeSvc: {session_id, message}
+deactivate API
+
+PracticeSvc --> FE: Session started
+deactivate PracticeSvc
+
+FE --> Learner: "Practice started!\nSay something..."
+
+== 3. Conversation Loop ==
+
+loop For each user message
+
+    Learner -> FE: Speak into microphone
+    FE -> WebSpeech: Start recognition
+    activate WebSpeech
+    WebSpeech --> FE: transcript (text)
+    deactivate WebSpeech
+    
+    FE -> PracticeSvc: chat(sessionId, message)
+    activate PracticeSvc
+    
+    PracticeSvc -> API: POST /api/practice/chat\n{session_id, message}
+    activate API
+    
+    API -> SessionSvc: process_chat(session_id, message)
+    activate SessionSvc
+    
+    SessionSvc -> AISvc: generate_response(user_input,\nhistory, scenario)
+    activate AISvc
+    
+    AISvc -> AISvc: Build enhanced prompt\n(with scoring criteria)
+    AISvc -> AISvc: _safe_generate(prompt)\n(with key rotation)
+    AISvc --> SessionSvc: AI response with\ninline feedback & scores
+    deactivate AISvc
+    
+    SessionSvc -> DB: UPDATE practice_sessions\nSET transcript = append(message)
+    
+    SessionSvc --> API: {response, session_id}
+    deactivate SessionSvc
+    
+    API --> PracticeSvc: ChatResponse
+    deactivate API
+    
+    PracticeSvc --> FE: AI response
+    deactivate PracticeSvc
+    
+    FE -> WebSpeech: Speak AI response\n(Text-to-Speech)
+    FE --> Learner: Display response\n+ inline corrections
+
+end
+
+== 4. End Session & Get Analysis ==
+
+Learner -> FE: Click "End Practice"
+FE -> PracticeSvc: completeSession(sessionId)
+activate PracticeSvc
+
+PracticeSvc -> API: POST /api/practice/complete\n{session_id}
+activate API
+
+API -> SessionSvc: finalize_session(session_id)
+activate SessionSvc
+
+SessionSvc -> DB: Get full transcript
+DB --> SessionSvc: transcript
+
+SessionSvc -> AISvc: analyze_practice(transcript)
+activate AISvc
+AISvc -> AISvc: Generate detailed\nJSON analysis
+AISvc --> SessionSvc: {scores, analysis,\nerrors, suggestions}
+deactivate AISvc
+
+SessionSvc -> DB: UPDATE practice_sessions\nSET is_completed = true,\nscores, ai_feedback,\nended_at = NOW()
+DB --> SessionSvc: OK
+
+SessionSvc --> API: SessionAnalysis
+deactivate SessionSvc
+
+API --> PracticeSvc: {session_id, analysis,\nscores (pronunciation,\ngrammar, vocabulary,\nfluency, overall)}
+deactivate API
+
+PracticeSvc --> FE: Analysis result
+deactivate PracticeSvc
+
+FE --> Learner: Display session summary:\n- Overall score\n- Skill breakdown\n- Errors & suggestions
+
+deactivate FE
+
+== 5. Upload Audio (Optional) ==
+
+opt Audio Recording Available
+    FE -> PracticeSvc: uploadAudio(sessionId, blob)
+    PracticeSvc -> API: POST /api/practice/upload-audio\n(multipart/form-data)
+    API -> SessionSvc: save_audio_recording()
+    SessionSvc -> DB: UPDATE audio_recording
+    DB --> SessionSvc: OK
+    API --> PracticeSvc: Success
+    PracticeSvc --> FE: Audio saved\n(for mentor review)
+end
+
+@enduml

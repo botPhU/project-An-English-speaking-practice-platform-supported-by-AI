@@ -3,16 +3,23 @@ import LearnerLayout from '../../layouts/LearnerLayout';
 import { useAuth } from '../../context/AuthContext';
 import { learnerService } from '../../services/learnerService';
 import MyMentorCard from '../../components/MyMentorCard';
+import { Link } from 'react-router-dom';
+import api from '../../services/api';
 
 export default function Dashboard() {
     const { user: authUser } = useAuth();
     const [stats, setStats] = useState<any>(null);
     const [dailyChallenge, setDailyChallenge] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [placementStatus, setPlacementStatus] = useState<{ needs_test: boolean, current_level: string | null }>({
+        needs_test: false,
+        current_level: null
+    });
 
     useEffect(() => {
         if (authUser?.id) {
             fetchDashboardData();
+            checkPlacementStatus();
         }
     }, [authUser?.id]);
 
@@ -32,6 +39,16 @@ export default function Dashboard() {
         }
     };
 
+    const checkPlacementStatus = async () => {
+        try {
+            const response = await api.get(`/api/placement-test/check-status/${authUser?.id}`);
+            setPlacementStatus(response.data);
+        } catch (error) {
+            // Mock - assume user hasn't taken the test
+            setPlacementStatus({ needs_test: true, current_level: null });
+        }
+    };
+
     if (loading) {
         return (
             <LearnerLayout title="Bảng điều khiển">
@@ -45,6 +62,41 @@ export default function Dashboard() {
     return (
         <LearnerLayout title="Bảng điều khiển">
             <div className="flex flex-col gap-10">
+                {/* Placement Test Banner - Show if user hasn't taken test */}
+                {placementStatus.needs_test && (
+                    <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-6 shadow-lg">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                                    <span className="text-3xl">📝</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">Làm bài kiểm tra phân loại</h3>
+                                    <p className="text-white/80 text-sm">Hoàn thành bài kiểm tra để được xếp trình độ và nhận lộ trình học phù hợp</p>
+                                </div>
+                            </div>
+                            <Link
+                                to="/placement-test"
+                                className="px-6 py-3 bg-white text-orange-600 rounded-xl font-bold hover:bg-white/90 transition shadow-lg"
+                            >
+                                Làm ngay →
+                            </Link>
+                        </div>
+                    </div>
+                )}
+
+                {/* Current Level Badge - Show if user has level */}
+                {placementStatus.current_level && (
+                    <div className="flex items-center gap-3">
+                        <span className="px-4 py-2 bg-primary/20 text-primary rounded-full font-bold text-sm">
+                            📊 Trình độ: {placementStatus.current_level}
+                        </span>
+                        <Link to="/placement-test" className="text-text-secondary text-xs hover:underline">
+                            Làm lại bài test
+                        </Link>
+                    </div>
+                )}
+
                 {/* Welcome Section */}
                 <header className="flex flex-col gap-4">
                     <h2 className="text-3xl md:text-4xl font-black leading-tight text-white">

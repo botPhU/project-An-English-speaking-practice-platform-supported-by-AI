@@ -1,0 +1,212 @@
+@startuml SD_Mentor_Booking
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: Mentor Booking
+
+actor "Learner" as Learner
+actor "Mentor" as Mentor
+participant "Learner\nFrontend" as LFE
+participant "Mentor\nFrontend" as MFE
+participant "LearnerService" as LSvc
+participant "MentorService" as MSvc
+participant "Flask API" as API
+participant "BookingService" as BSvc
+database "MySQL\nDatabase" as DB
+participant "WebSocket\nServer" as WS
+
+== 1. View My Mentor ==
+
+Learner -> LFE: Open "My Mentor" page
+activate LFE
+
+LFE -> LSvc: getMyMentor(learnerId)
+activate LSvc
+
+LSvc -> API: GET /api/learner/{id}/mentor
+activate API
+
+API -> DB: Query\nmentor_assignments\nWHERE learner_id = ?
+activate DB
+DB --> API: Assignment with\nmentor details
+deactivate DB
+
+API --> LSvc: {mentor_id, name,\navatar, specializations,\nrating, is_online}
+deactivate API
+
+LSvc --> LFE: Mentor info
+deactivate LSvc
+
+LFE --> Learner: Display mentor card\nwith "Book Session" button
+
+== 2. Create Booking Request ==
+
+Learner -> LFE: Click "Book Session"
+LFE --> Learner: Open BookingModal
+
+Learner -> LFE: Fill form:\n- Date\n- Time\n- Duration\n- Topic\n- Notes
+
+Learner -> LFE: Click "Submit"
+
+LFE -> LSvc: createBooking({\nlearner_id, mentor_id,\nscheduled_date,\nscheduled_time,\nduration_minutes,\ntopic, notes})
+activate LSvc
+
+LSvc -> API: POST /api/learner/bookings\n{booking data}
+activate API
+
+API -> BSvc: create_booking(data)
+activate BSvc
+
+BSvc -> BSvc: Validate:\n- Mentor exists\n- Time not conflicting
+
+BSvc -> DB: INSERT INTO mentor_bookings\n(learner_id, mentor_id,\nscheduled_date, scheduled_time,\ntopic, notes, status='pending')
+activate DB
+DB --> BSvc: booking.id
+deactivate DB
+
+BSvc --> API: MentorBooking object
+deactivate BSvc
+
+API -> WS: Notify mentor\nabout new booking
+activate WS
+WS -> MFE: emit('new_booking',\n{booking_id, learner_name})
+activate MFE
+MFE --> Mentor: Show notification\n"New booking request!"
+deactivate MFE
+deactivate WS
+
+API --> LSvc: {id, status: 'pending',\nmessage: 'Booking created'}
+deactivate API
+
+LSvc --> LFE: Success
+deactivate LSvc
+
+LFE --> Learner: "Booking request sent!\nWaiting for confirmation."
+deactivate LFE
+
+== 3A. Mentor Confirms Booking ==
+
+Mentor -> MFE: View booking requests
+activate MFE
+
+MFE -> MSvc: getBookingRequests(mentorId)
+activate MSvc
+
+MSvc -> API: GET /api/mentor/{id}/bookings\n?status=pending
+activate API
+
+API -> DB: Query pending bookings
+DB --> API: Booking list
+
+API --> MSvc: Booking[] with\nlearner details
+deactivate API
+
+MSvc --> MFE: Pending bookings
+deactivate MSvc
+
+MFE --> Mentor: Display booking list
+
+Mentor -> MFE: Click "Confirm" on booking
+
+MFE -> MSvc: confirmBooking(bookingId)
+activate MSvc
+
+MSvc -> API: PUT /api/mentor/bookings/{id}/confirm
+activate API
+
+API -> BSvc: update_status(booking_id,\n'confirmed')
+activate BSvc
+
+BSvc -> DB: UPDATE mentor_bookings\nSET status = 'confirmed',\nconfirmed_at = NOW()
+DB --> BSvc: OK
+
+BSvc --> API: Updated booking
+deactivate BSvc
+
+API -> WS: Notify learner
+activate WS
+WS -> LFE: emit('booking_update',\n{booking_id, status: 'confirmed'})
+activate LFE
+LFE --> Learner: "Your booking\nhas been confirmed!"
+deactivate LFE
+deactivate WS
+
+API --> MSvc: Success
+deactivate API
+
+MSvc --> MFE: Confirmed
+deactivate MSvc
+
+MFE --> Mentor: "Booking confirmed!"
+deactivate MFE
+
+== 3B. Mentor Rejects Booking (Alternative) ==
+
+note over Mentor, MFE: If mentor is unavailable
+
+Mentor -> MFE: Click "Reject" on booking
+MFE -> MSvc: rejectBooking(bookingId, reason)
+MSvc -> API: PUT /api/mentor/bookings/{id}/reject
+API -> BSvc: update_status(id, 'rejected')
+BSvc -> DB: UPDATE status = 'rejected'
+DB --> BSvc: OK
+API -> WS: Notify learner
+WS -> LFE: emit('booking_update',\n{status: 'rejected'})
+LFE --> Learner: "Booking declined.\nPlease try another time."
+
+== 4. Complete Session ==
+
+note over Mentor, Learner: After video call ends
+
+Mentor -> MFE: Click "Mark Complete"
+activate MFE
+
+MFE -> MSvc: completeBooking(bookingId)
+activate MSvc
+
+MSvc -> API: PUT /api/mentor/bookings/{id}/complete
+activate API
+
+API -> BSvc: update_status(id, 'completed')
+activate BSvc
+
+BSvc -> DB: UPDATE mentor_bookings\nSET status = 'completed',\ncompleted_at = NOW()
+DB --> BSvc: OK
+
+BSvc --> API: Updated booking
+deactivate BSvc
+
+API -> WS: Notify learner
+activate WS
+WS -> LFE: emit('booking_update',\n{status: 'completed'})
+activate LFE
+LFE --> Learner: "Session completed!\nPlease rate your mentor."
+deactivate LFE
+deactivate WS
+
+API --> MSvc: Success
+deactivate API
+
+MSvc --> MFE: Completed
+deactivate MSvc
+
+MFE --> Mentor: "Session marked complete!"
+deactivate MFE
+
+== 5. Learner Cancels Booking (Optional) ==
+
+opt Before session starts
+    Learner -> LFE: Click "Cancel Booking"
+    LFE -> LSvc: cancelBooking(bookingId)
+    LSvc -> API: PUT /api/learner/bookings/{id}/cancel
+    API -> BSvc: update_status(id, 'cancelled')
+    BSvc -> DB: UPDATE status = 'cancelled'
+    API -> WS: Notify mentor
+    WS -> MFE: "Booking cancelled by learner"
+end
+
+@enduml
