@@ -56,3 +56,14 @@ Thumbs.db
 # Database
 *.db
 *.sqlite3
+
+# Excel files
+*.xlsx
+*.xls
+~$*
+
+# Test and generated files
+generate_*.py
+tatus*
+*_test.py
+test_*.py

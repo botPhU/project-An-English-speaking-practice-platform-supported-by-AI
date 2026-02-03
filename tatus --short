@@ -1,5 +1,0 @@
-[33mf9c084b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: Create missing mentor-learner assignments and add debug scripts
-[33mc457511[m chore: Clean up database files and organize scripts - Delete: check_result.txt, default.db, all_models.txt, models_output.txt - Delete: run_postgres.sh, mysql-init.txt - Move run_railway_migration.py to scripts folder
-[33m8927f93[m chore: Update SQL migration comments for Railway
-[33m84e3dd9[m feat: Add booking system, real ratings, and remove fake metrics - Add mentor_bookings and reviews tables migration - Create ReviewModel for learner ratings - Update MentorDashboard to show real stats - Add RateMentorModal for learner to rate mentor - Fix NotificationDropdown to show booking modal - Improve booking error handling
-[33m5148c11[m feat: Implement note management functionality including API endpoints, domain model, infrastructure, and service layer.
