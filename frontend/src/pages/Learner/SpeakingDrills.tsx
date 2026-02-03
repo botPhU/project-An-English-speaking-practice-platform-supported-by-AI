@@ -112,6 +112,7 @@ export default function SpeakingDrills() {
     const [sessionScore, setSessionScore] = useState<number[]>([]);
     const [vocabularyHints, setVocabularyHints] = useState<VocabularyHint[]>([]);
     const [sentenceTemplates, setSentenceTemplates] = useState<string[]>([]);
+    const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
 
     // Speech recognition ref
     const recognitionRef = useRef<ISpeechRecognition | null>(null);
@@ -297,6 +298,23 @@ export default function SpeakingDrills() {
 
             setSessionScore(prev => [...prev.slice(0, -1), score]);
 
+            // Save messages to database session
+            if (currentSessionId) {
+                // Save user message
+                await api.post(`/api/speaking-drills/session/${currentSessionId}/message`, {
+                    role: 'user',
+                    text: userText,
+                    score: score,
+                    feedback: response.data.feedback
+                }).catch(() => { });
+
+                // Save AI response
+                await api.post(`/api/speaking-drills/session/${currentSessionId}/message`, {
+                    role: 'ai',
+                    text: aiResponse
+                }).catch(() => { });
+            }
+
             // Set vocabulary hints and sentence templates
             if (response.data.vocabulary_hints) {
                 setVocabularyHints(response.data.vocabulary_hints);
@@ -348,13 +366,28 @@ export default function SpeakingDrills() {
     };
 
     // Start conversation
-    const startConversation = (topic: typeof CONVERSATION_TOPICS[0]) => {
+    const startConversation = async (topic: typeof CONVERSATION_TOPICS[0]) => {
         setSelectedTopic(topic);
         setConversation([{ role: 'ai', text: topic.starter }]);
         setIsConversationActive(true);
         setSessionScore([]);
+        setCurrentSessionId(null);
 
-        // Set initial vocabulary hints based on topic
+        // Start session in database
+        try {
+            const response = await api.post('/api/speaking-drills/session/start', {
+                learner_id: user?.id,
+                topic: topic.title,
+                mode: 'conversation',
+                starter_text: topic.starter
+            });
+            if (response.data.success) {
+                setCurrentSessionId(response.data.session_id);
+            }
+        } catch (error) {
+            console.log('Could not start session in database');
+        }
+
         const topicVocabulary: { [key: string]: { vocabulary: VocabularyHint[], templates: string[] } } = {
             'Giới thiệu bản thân': {
                 vocabulary: [
@@ -463,14 +496,24 @@ export default function SpeakingDrills() {
         playAudio(topic.starter);
     };
 
-    // End conversation
-    const endConversation = () => {
+    // End conversation and save to database
+    const endConversation = async () => {
         setIsConversationActive(false);
         const avgScore = sessionScore.length > 0
             ? Math.round(sessionScore.reduce((a, b) => a + b, 0) / sessionScore.length)
             : 0;
 
-        alert(`🎉 Hoàn thành!\n\nĐiểm trung bình: ${avgScore}%\nSố lượt nói: ${sessionScore.length}`);
+        // End session in database
+        if (currentSessionId) {
+            try {
+                await api.post(`/api/speaking-drills/session/${currentSessionId}/end`);
+            } catch (e) {
+                console.error('Error ending session:', e);
+            }
+        }
+
+        alert(`🎉 Hoàn thành!\n\nĐiểm trung bình: ${avgScore}%\nSố lượt nói: ${sessionScore.length}\n\nPhiên đã được lưu để mentor xem.`);
+        setCurrentSessionId(null);
     };
 
     // Next sentence

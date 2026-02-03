@@ -41,6 +41,7 @@ import PronunciationErrors from './pages/Mentor/PronunciationErrors'
 import GrammarErrors from './pages/Mentor/GrammarErrors'
 import ClearExpression from './pages/Mentor/ClearExpression'
 import MentorProfile from './pages/Mentor/Profile'
+import SpeakingSessions from './pages/Mentor/SpeakingSessions'
 import { ADMIN_ROUTES, AUTH_ROUTES, LEARNER_ROUTES, MENTOR_ROUTES } from './routes/paths'
 
 function App() {
@@ -82,6 +83,7 @@ function App() {
         <Route path={MENTOR_ROUTES.DASHBOARD} element={<MentorDashboard />} />
         <Route path="/mentor/dashboard" element={<MentorDashboard />} />
         <Route path="/mentor/messages" element={<MentorMessages />} />
+        <Route path={MENTOR_ROUTES.SPEAKING_SESSIONS} element={<SpeakingSessions />} />
         <Route path={MENTOR_ROUTES.LEARNER_ASSESSMENT} element={<LearnerAssessment />} />
         <Route path={MENTOR_ROUTES.RESOURCES} element={<Resources />} />
         <Route path={MENTOR_ROUTES.FEEDBACK_SESSION} element={<FeedbackSession />} />

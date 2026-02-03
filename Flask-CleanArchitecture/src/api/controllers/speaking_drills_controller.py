@@ -343,3 +343,198 @@ def levenshtein_similarity(s1: str, s2: str) -> float:
     max_len = max(len1, len2)
     
     return 1 - (distance / max_len) if max_len > 0 else 0.0
+
+
+# ============================================
+# SESSION MANAGEMENT ENDPOINTS
+# ============================================
+
+@speaking_drills_bp.route('/session/start', methods=['POST'])
+def start_session():
+    """Start a new speaking practice session"""
+    data = request.get_json()
+    
+    learner_id = data.get('learner_id')
+    topic = data.get('topic', 'General')
+    mode = data.get('mode', 'conversation')
+    starter_text = data.get('starter_text', '')
+    
+    if not learner_id:
+        return jsonify({'success': False, 'error': 'Missing learner_id'}), 400
+    
+    try:
+        from src.infrastructure.models.speaking_session_model import SpeakingSession, SpeakingMessage
+        from src.infrastructure.database import db
+        
+        # Create session
+        session = SpeakingSession(
+            learner_id=learner_id,
+            topic=topic,
+            mode=mode,
+            is_active=True
+        )
+        db.session.add(session)
+        db.session.flush()  # Get session ID
+        
+        # Add AI starter message
+        if starter_text:
+            ai_msg = SpeakingMessage(
+                session_id=session.id,
+                role='ai',
+                text=starter_text
+            )
+            db.session.add(ai_msg)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'session_id': session.id,
+            'message': 'Session started'
+        }), 201
+        
+    except Exception as e:
+        print(f"Error starting session: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@speaking_drills_bp.route('/session/<int:session_id>/message', methods=['POST'])
+def add_message(session_id):
+    """Add a message to an existing session"""
+    data = request.get_json()
+    
+    role = data.get('role')  # 'ai' or 'user'
+    text = data.get('text', '')
+    score = data.get('score')
+    feedback = data.get('feedback')
+    audio_url = data.get('audio_url')
+    
+    if not text:
+        return jsonify({'success': False, 'error': 'Missing text'}), 400
+    
+    try:
+        from src.infrastructure.models.speaking_session_model import SpeakingSession, SpeakingMessage
+        from src.infrastructure.database import db
+        
+        session = SpeakingSession.query.get(session_id)
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        msg = SpeakingMessage(
+            session_id=session_id,
+            role=role,
+            text=text,
+            score=score,
+            feedback=feedback,
+            audio_url=audio_url
+        )
+        db.session.add(msg)
+        
+        # Update session stats
+        if role == 'user':
+            session.total_turns += 1
+            if score:
+                # Recalculate average
+                user_msgs = SpeakingMessage.query.filter_by(session_id=session_id, role='user').all()
+                total_score = sum(m.score or 0 for m in user_msgs) + (score or 0)
+                session.average_score = total_score / (len(user_msgs) + 1)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message_id': msg.id
+        }), 201
+        
+    except Exception as e:
+        print(f"Error adding message: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@speaking_drills_bp.route('/session/<int:session_id>/end', methods=['POST'])
+def end_session(session_id):
+    """End an active speaking session"""
+    try:
+        from src.infrastructure.models.speaking_session_model import SpeakingSession, SpeakingMessage
+        from src.infrastructure.database import db
+        from datetime import datetime
+        
+        session = SpeakingSession.query.get(session_id)
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        session.is_active = False
+        session.ended_at = datetime.utcnow()
+        
+        # Calculate final average score
+        user_msgs = SpeakingMessage.query.filter_by(session_id=session_id, role='user').all()
+        if user_msgs:
+            total_score = sum(m.score or 0 for m in user_msgs)
+            session.average_score = total_score / len(user_msgs)
+            session.total_turns = len(user_msgs)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'session': session.to_dict()
+        }), 200
+        
+    except Exception as e:
+        print(f"Error ending session: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@speaking_drills_bp.route('/sessions', methods=['GET'])
+def get_sessions():
+    """Get speaking sessions for mentor (all learners) or learner (own sessions)"""
+    user_id = request.args.get('user_id')
+    role = request.args.get('role', 'learner')  # 'mentor' to get all, 'learner' for own
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    try:
+        from src.infrastructure.models.speaking_session_model import SpeakingSession
+        
+        query = SpeakingSession.query.filter_by(is_active=False)
+        
+        if role == 'learner' and user_id:
+            query = query.filter_by(learner_id=user_id)
+        
+        # Order by most recent
+        query = query.order_by(SpeakingSession.started_at.desc())
+        
+        # Paginate
+        sessions_page = query.paginate(page=page, per_page=per_page, error_out=False)
+        
+        return jsonify({
+            'success': True,
+            'sessions': [s.to_dict() for s in sessions_page.items],
+            'total': sessions_page.total,
+            'pages': sessions_page.pages,
+            'current_page': page
+        }), 200
+        
+    except Exception as e:
+        print(f"Error getting sessions: {e}")
+        return jsonify({'success': False, 'error': str(e), 'sessions': []}), 200
+
+
+@speaking_drills_bp.route('/session/<int:session_id>', methods=['GET'])
+def get_session(session_id):
+    """Get a single session with all messages"""
+    try:
+        from src.infrastructure.models.speaking_session_model import SpeakingSession
+        
+        session = SpeakingSession.query.get(session_id)
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'session': session.to_dict()
+        }), 200
+        
+    except Exception as e:
+        print(f"Error getting session: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

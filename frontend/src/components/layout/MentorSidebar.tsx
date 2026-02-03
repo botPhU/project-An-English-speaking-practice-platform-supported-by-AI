@@ -6,11 +6,12 @@ import { useAuth } from '../../context/AuthContext';
 const navItems = [
     { name: 'Tổng quan', icon: 'dashboard', path: MENTOR_ROUTES.DASHBOARD, exact: true },
     { name: 'Tin nhắn', icon: 'chat', path: '/mentor/messages', exact: false },
+    { name: 'Lịch sử luyện nói', icon: 'record_voice_over', path: MENTOR_ROUTES.SPEAKING_SESSIONS, exact: false },
     { name: 'Đánh giá học viên', icon: 'assessment', path: MENTOR_ROUTES.LEARNER_ASSESSMENT, exact: false },
     { name: 'Phản hồi & Đánh giá', icon: 'rate_review', path: MENTOR_ROUTES.FEEDBACK_SESSION, exact: false },
     { name: 'Tình huống thực tế', icon: 'theater_comedy', path: MENTOR_ROUTES.REAL_LIFE_SITUATIONS, exact: false },
     { name: 'Chủ đề hội thoại', icon: 'forum', path: MENTOR_ROUTES.CONVERSATION_TOPICS, exact: false },
-    { name: 'Lỗi phát âm', icon: 'record_voice_over', path: MENTOR_ROUTES.PRONUNCIATION_ERRORS, exact: false },
+    { name: 'Lỗi phát âm', icon: 'hearing', path: MENTOR_ROUTES.PRONUNCIATION_ERRORS, exact: false },
     { name: 'Lỗi ngữ pháp', icon: 'spellcheck', path: MENTOR_ROUTES.GRAMMAR_ERRORS, exact: false },
     { name: 'Tài liệu', icon: 'folder_open', path: MENTOR_ROUTES.RESOURCES, exact: false },
     { name: 'Hồ sơ', icon: 'person', path: MENTOR_ROUTES.PROFILE, exact: false },

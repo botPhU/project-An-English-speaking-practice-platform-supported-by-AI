@@ -6,3 +6,5 @@ from infrastructure.models.assessment_model import AssessmentModel
 from infrastructure.models.notification_model import NotificationModel
 from infrastructure.models.mentor_booking_model import MentorBookingModel
 from infrastructure.models.review_model import ReviewModel
+from infrastructure.models.speaking_session_model import SpeakingSession, SpeakingMessage
+

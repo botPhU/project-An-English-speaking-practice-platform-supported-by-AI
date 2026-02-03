@@ -32,6 +32,7 @@ export const LEARNER_ROUTES = {
 export const MENTOR_ROUTES = {
     DASHBOARD: '/mentor',
     LEARNER_ASSESSMENT: '/mentor/assessment',
+    SPEAKING_SESSIONS: '/mentor/speaking-sessions',  // View learner AI speaking sessions
     RESOURCES: '/mentor/resources',
     FEEDBACK_SESSION: '/mentor/feedback',
     CONVERSATION_TOPICS: '/mentor/topics',
