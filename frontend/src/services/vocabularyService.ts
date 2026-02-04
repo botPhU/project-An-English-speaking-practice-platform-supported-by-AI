@@ -1,5 +1,43 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { apiBaseUrl } from './api';
+
+// Validation utilities
+const validateWord = (word: string): void => {
+  if (!word || typeof word !== 'string') {
+    throw new Error('Word must be a non-empty string');
+  }
+  if (word.length > 100) {
+    throw new Error('Word must be less than 100 characters');
+  }
+};
+
+const validateDefinition = (def: string): void => {
+  if (!def || typeof def !== 'string') {
+    throw new Error('Definition must be a non-empty string');
+  }
+  if (def.length < 10) {
+    throw new Error('Definition must be at least 10 characters');
+  }
+  if (def.length > 500) {
+    throw new Error('Definition must be less than 500 characters');
+  }
+};
+
+const validateDifficulty = (difficulty: string): boolean => {
+  return ['beginner', 'intermediate', 'advanced'].includes(difficulty);
+};
+
+const validateSetTitle = (title: string): void => {
+  if (!title || typeof title !== 'string') {
+    throw new Error('Set title must be a non-empty string');
+  }
+  if (title.length < 3) {
+    throw new Error('Set title must be at least 3 characters');
+  }
+  if (title.length > 100) {
+    throw new Error('Set title must be less than 100 characters');
+  }
+};
 
 export interface Vocabulary {
   id: string;
@@ -46,26 +84,44 @@ export interface QuizQuestion {
   options?: string[];
 }
 
+const getAuthHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem('token')}`,
+  'Content-Type': 'application/json',
+});
+
+const handleApiError = (error: unknown, context: string): never => {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError;
+    const statusCode = axiosError.response?.status;
+    const message = axiosError.response?.data as any;
+
+    throw new Error(
+      `[${context}] ${statusCode || 'Unknown'}: ${message?.message || error.message}`
+    );
+  }
+  throw new Error(`Unexpected error in ${context}: ${error}`);
+};
+
 class VocabularyService {
   /**
-   * Tạo bộ từ vựng mới
+   * Tạo bộ từ vựng mới với validation
    */
-  async createVocabularySet(setData: Omit<VocabularySet, 'id' | 'createdAt' | 'updatedAt'>): Promise<VocabularySet> {
+  async createVocabularySet(
+    setData: Omit<VocabularySet, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<VocabularySet> {
     try {
-      const response = await axios.post(
-        `${apiBaseUrl}/api/vocabulary/sets`,
-        setData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      // Validate inputs
+      validateSetTitle(setData.title);
+
+      const response = await axios.post(`${apiBaseUrl}/api/vocabulary/sets`, setData, {
+        headers: getAuthHeaders(),
+      });
       return response.data;
     } catch (error) {
-      console.error('Error creating vocabulary set:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error; // Re-throw validation errors
+      }
+      handleApiError(error, 'creating vocabulary set');
     }
   }
 
@@ -74,18 +130,12 @@ class VocabularyService {
    */
   async getUserVocabularySets(): Promise<VocabularySet[]> {
     try {
-      const response = await axios.get(
-        `${apiBaseUrl}/api/vocabulary/sets`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-      return response.data;
+      const response = await axios.get(`${apiBaseUrl}/api/vocabulary/sets`, {
+        headers: getAuthHeaders(),
+      });
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-      console.error('Error fetching vocabulary sets:', error);
-      throw error;
+      handleApiError(error, 'fetching vocabulary sets');
     }
   }
 
@@ -94,40 +144,50 @@ class VocabularyService {
    */
   async getVocabularySet(setId: string): Promise<VocabularySet> {
     try {
-      const response = await axios.get(
-        `${apiBaseUrl}/api/vocabulary/sets/${setId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
+      if (!setId?.trim()) {
+        throw new Error('Set ID is required');
+      }
+
+      const response = await axios.get(`${apiBaseUrl}/api/vocabulary/sets/${setId}`, {
+        headers: getAuthHeaders(),
+      });
       return response.data;
     } catch (error) {
-      console.error('Error fetching vocabulary set:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'fetching vocabulary set');
     }
   }
 
   /**
    * Cập nhật bộ từ vựng
    */
-  async updateVocabularySet(setId: string, setData: Partial<VocabularySet>): Promise<VocabularySet> {
+  async updateVocabularySet(
+    setId: string,
+    setData: Partial<VocabularySet>
+  ): Promise<VocabularySet> {
     try {
+      if (!setId?.trim()) {
+        throw new Error('Set ID is required');
+      }
+      if (setData.title) {
+        validateSetTitle(setData.title);
+      }
+
       const response = await axios.put(
         `${apiBaseUrl}/api/vocabulary/sets/${setId}`,
         setData,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
         }
       );
       return response.data;
     } catch (error) {
-      console.error('Error updating vocabulary set:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'updating vocabulary set');
     }
   }
 
@@ -136,39 +196,50 @@ class VocabularyService {
    */
   async deleteVocabularySet(setId: string): Promise<void> {
     try {
-      await axios.delete(
-        `${apiBaseUrl}/api/vocabulary/sets/${setId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
+      if (!setId?.trim()) {
+        throw new Error('Set ID is required');
+      }
+
+      await axios.delete(`${apiBaseUrl}/api/vocabulary/sets/${setId}`, {
+        headers: getAuthHeaders(),
+      });
     } catch (error) {
-      console.error('Error deleting vocabulary set:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'deleting vocabulary set');
     }
   }
 
   /**
-   * Thêm từ vựng vào bộ
+   * Thêm từ vựng vào bộ với validation
    */
   async addWordToSet(setId: string, word: Vocabulary): Promise<Vocabulary> {
     try {
+      if (!setId?.trim()) {
+        throw new Error('Set ID is required');
+      }
+
+      // Validate word data
+      validateWord(word.word);
+      validateDefinition(word.definition);
+      if (!validateDifficulty(word.difficulty)) {
+        throw new Error('Difficulty must be beginner, intermediate, or advanced');
+      }
+
       const response = await axios.post(
         `${apiBaseUrl}/api/vocabulary/sets/${setId}/words`,
         word,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
         }
       );
       return response.data;
     } catch (error) {
-      console.error('Error adding word to set:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'adding word to set');
     }
   }
 
@@ -177,17 +248,18 @@ class VocabularyService {
    */
   async removeWordFromSet(setId: string, wordId: string): Promise<void> {
     try {
-      await axios.delete(
-        `${apiBaseUrl}/api/vocabulary/sets/${setId}/words/${wordId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
+      if (!setId?.trim() || !wordId?.trim()) {
+        throw new Error('Set ID and Word ID are required');
+      }
+
+      await axios.delete(`${apiBaseUrl}/api/vocabulary/sets/${setId}/words/${wordId}`, {
+        headers: getAuthHeaders(),
+      });
     } catch (error) {
-      console.error('Error removing word from set:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'removing word from set');
     }
   }
 
@@ -196,18 +268,22 @@ class VocabularyService {
    */
   async getWordStats(wordId: string): Promise<WordStats> {
     try {
+      if (!wordId?.trim()) {
+        throw new Error('Word ID is required');
+      }
+
       const response = await axios.get(
         `${apiBaseUrl}/api/vocabulary/words/${wordId}/stats`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
+          headers: getAuthHeaders(),
         }
       );
       return response.data;
     } catch (error) {
-      console.error('Error fetching word stats:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'fetching word stats');
     }
   }
 
@@ -216,20 +292,26 @@ class VocabularyService {
    */
   async recordWordResponse(wordId: string, isCorrect: boolean): Promise<WordStats> {
     try {
+      if (!wordId?.trim()) {
+        throw new Error('Word ID is required');
+      }
+      if (typeof isCorrect !== 'boolean') {
+        throw new Error('isCorrect must be a boolean');
+      }
+
       const response = await axios.post(
         `${apiBaseUrl}/api/vocabulary/words/${wordId}/response`,
         { isCorrect },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
         }
       );
       return response.data;
     } catch (error) {
-      console.error('Error recording word response:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'recording word response');
     }
   }
 
@@ -238,46 +320,59 @@ class VocabularyService {
    */
   async generateQuiz(setId: string, questionCount: number = 10): Promise<QuizQuestion[]> {
     try {
-      const response = await axios.get(
-        `${apiBaseUrl}/api/vocabulary/sets/${setId}/quiz`,
-        {
-          params: { questionCount },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-      return response.data;
+      if (!setId?.trim()) {
+        throw new Error('Set ID is required');
+      }
+      if (questionCount < 1 || questionCount > 100) {
+        throw new Error('Question count must be between 1 and 100');
+      }
+
+      const response = await axios.get(`${apiBaseUrl}/api/vocabulary/sets/${setId}/quiz`, {
+        params: { questionCount },
+        headers: getAuthHeaders(),
+      });
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-      console.error('Error generating quiz:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'generating quiz');
     }
   }
 
   /**
    * Ghi nhận kết quả bài quiz
    */
-  async submitQuizResult(setId: string, results: { questionId: string; answer: string }[]): Promise<{
+  async submitQuizResult(
+    setId: string,
+    results: { questionId: string; answer: string }[]
+  ): Promise<{
     score: number;
     totalQuestions: number;
     percentage: number;
     timeSpent: number;
   }> {
     try {
+      if (!setId?.trim()) {
+        throw new Error('Set ID is required');
+      }
+      if (!Array.isArray(results) || results.length === 0) {
+        throw new Error('Results must be a non-empty array');
+      }
+
       const response = await axios.post(
         `${apiBaseUrl}/api/vocabulary/sets/${setId}/quiz-result`,
         { results },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
         }
       );
       return response.data;
     } catch (error) {
-      console.error('Error submitting quiz result:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'submitting quiz result');
     }
   }
 
@@ -286,42 +381,40 @@ class VocabularyService {
    */
   async getWordsToReview(): Promise<Vocabulary[]> {
     try {
-      const response = await axios.get(
-        `${apiBaseUrl}/api/vocabulary/review`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-      return response.data;
+      const response = await axios.get(`${apiBaseUrl}/api/vocabulary/review`, {
+        headers: getAuthHeaders(),
+      });
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-      console.error('Error fetching words to review:', error);
-      throw error;
+      handleApiError(error, 'fetching words to review');
     }
   }
 
   /**
-   * Tìm kiếm từ vựng
+   * Tìm kiếm từ vựng với validation
    */
   async searchVocabulary(keyword: string, category?: string): Promise<Vocabulary[]> {
     try {
-      const response = await axios.get(
-        `${apiBaseUrl}/api/vocabulary/search`,
-        {
-          params: {
-            keyword,
-            category,
-          },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-      return response.data;
+      if (!keyword?.trim()) {
+        throw new Error('Search keyword is required');
+      }
+      if (keyword.length < 2) {
+        throw new Error('Search keyword must be at least 2 characters');
+      }
+
+      const response = await axios.get(`${apiBaseUrl}/api/vocabulary/search`, {
+        params: {
+          keyword: keyword.trim(),
+          category,
+        },
+        headers: getAuthHeaders(),
+      });
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-      console.error('Error searching vocabulary:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'searching vocabulary');
     }
   }
 
@@ -330,18 +423,19 @@ class VocabularyService {
    */
   async getVocabularyByCategory(category: string): Promise<Vocabulary[]> {
     try {
-      const response = await axios.get(
-        `${apiBaseUrl}/api/vocabulary/category/${category}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-      return response.data;
+      if (!category?.trim()) {
+        throw new Error('Category is required');
+      }
+
+      const response = await axios.get(`${apiBaseUrl}/api/vocabulary/category/${category}`, {
+        headers: getAuthHeaders(),
+      });
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-      console.error('Error fetching vocabulary by category:', error);
-      throw error;
+      if (error instanceof Error && !error.message.includes('[')) {
+        throw error;
+      }
+      handleApiError(error, 'fetching vocabulary by category');
     }
   }
 }
