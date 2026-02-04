@@ -1,0 +1,135 @@
+@startuml CD_AI_Speaking_Practice
+skinparam backgroundColor white
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+title Class Diagram: AI Speaking Practice
+
+package "Frontend" {
+    class "PracticeService" as PracticeSvc {
+        +startSession(userId, topic, scenario)
+        +chat(sessionId, message)
+        +completeSession(sessionId)
+        +uploadAudio(sessionId, audioBlob)
+        +analyzePronunciation(transcript)
+        +getVocabulary(topic)
+        +quickFeedback(transcript)
+    }
+
+    class "AIPractice" as AIPractice <<Component>> {
+        -sessionId: number
+        -messages: ChatMessage[]
+        -isRecording: boolean
+        +startPractice()
+        +sendMessage()
+        +endSession()
+    }
+}
+
+package "Backend API" {
+    class "PracticeController" as PracticeCtrl <<Blueprint>> {
+        +start_session(): POST /api/practice/start
+        +chat(): POST /api/practice/chat
+        +complete(): POST /api/practice/complete
+        +analyze_pronunciation(): POST
+        +upload_audio(): POST
+        +get_vocabulary(): GET
+    }
+}
+
+package "Services" {
+    class "PracticeSessionService" as PracticeSvcBE {
+        -db_session: Session
+        +start_session(user_id, topic, scenario)
+        +process_chat(session_id, message)
+        +finalize_session(session_id)
+        +save_audio_recording(session_id, audio)
+        +get_audio_recording(session_id)
+    }
+
+    class "AIService" as AISvc {
+        -model: GenerativeModel
+        -_api_keys: List[str]
+        +generate_response(user_input, history)
+        +analyze_pronunciation(transcript)
+        +analyze_practice(transcript)
+        +get_vocabulary_suggestions(topic)
+        -_safe_generate(prompt)
+        -_get_active_model()
+    }
+}
+
+package "Domain Models" {
+    class "PracticeSessionModel" as Session {
+        +id: Integer <<PK>>
+        +user_id: Integer <<FK>>
+        +mentor_id: Integer <<FK>>
+        --
+        +session_type: String
+        +topic: String
+        +scenario: String
+        +duration_minutes: Integer
+        --
+        +transcript: Text
+        +ai_feedback: Text
+        --
+        +pronunciation_score: Float
+        +grammar_score: Float
+        +vocabulary_score: Float
+        +fluency_score: Float
+        +overall_score: Float
+        --
+        +pronunciation_errors: Text
+        +grammar_errors: Text
+        +vocabulary_suggestions: Text
+        --
+        +is_completed: Boolean
+        +started_at: DateTime
+        +ended_at: DateTime
+        +audio_recording: LargeBinary
+    }
+
+    class "UserModel" as User {
+        +id: Integer <<PK>>
+        +user_name: String
+        +full_name: String
+        +email: String
+        +role: String
+    }
+
+    class "ProgressModel" as Progress {
+        +id: Integer <<PK>>
+        +user_id: Integer <<FK>>
+        +current_streak: Integer
+        +longest_streak: Integer
+        +total_practice_minutes: Integer
+    }
+}
+
+package "External Services" {
+    class "Gemini API" as Gemini <<External>> {
+        +generate_content(prompt)
+    }
+
+    class "Web Speech API" as WebSpeech <<External>> {
+        +SpeechRecognition
+        +SpeechSynthesis
+    }
+}
+
+' Relationships
+AIPractice --> PracticeSvc : uses
+PracticeSvc --> PracticeCtrl : HTTP calls
+
+PracticeCtrl --> PracticeSvcBE : delegates
+PracticeSvcBE --> AISvc : uses
+PracticeSvcBE --> Session : manages
+
+AISvc --> Gemini : API calls
+AIPractice --> WebSpeech : voice input/output
+
+Session "n" --> "1" User : belongs to
+User "1" --> "1" Progress : has
+
+@enduml

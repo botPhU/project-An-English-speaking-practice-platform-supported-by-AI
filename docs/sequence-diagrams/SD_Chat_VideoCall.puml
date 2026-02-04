@@ -1,0 +1,344 @@
+@startuml SD_Chat_SendMessage
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: Real-time Chat (Send Message)
+
+actor "Learner" as Learner
+actor "Mentor" as Mentor
+participant "Learner\nFrontend" as LFE
+participant "Mentor\nFrontend" as MFE
+participant "MessageService\n(Frontend)" as MsgSvc
+participant "Flask API\n(/api/messages)" as API
+database "MySQL\nDatabase" as DB
+participant "WebSocket\nServer" as WS
+
+== Send Message Flow ==
+
+Learner -> LFE: Type and send message
+activate LFE
+
+LFE -> MsgSvc: sendMessage(senderId,\nreceiverId, content)
+activate MsgSvc
+
+MsgSvc -> API: POST /api/messages/send\n{sender_id, receiver_id, content}
+activate API
+
+API -> DB: INSERT INTO messages\n(sender_id, receiver_id,\ncontent, is_read, created_at)
+activate DB
+DB --> API: new_message.id
+deactivate DB
+
+API -> API: Prepare message response
+
+API --> MsgSvc: 201 Created\n{id, sender_id, receiver_id,\ncontent, created_at}
+deactivate API
+
+MsgSvc --> LFE: Message object
+deactivate MsgSvc
+
+LFE -> LFE: Update chat UI\n(add message to list)
+
+LFE --> Learner: Display sent message
+
+' Real-time notification via WebSocket
+API -> WS: Emit "new_message"\nto receiver
+activate WS
+
+WS -> WS: Find receiver socket\nby user_id
+
+alt Receiver is online
+    WS -> MFE: "new_message" event\n{message, sender}
+    activate MFE
+    MFE -> MFE: Update chat UI\n(add new message)
+    MFE --> Mentor: Show notification\n+ new message
+    deactivate MFE
+else Receiver is offline
+    WS -> WS: Message stored in DB\n(will be fetched later)
+end
+
+deactivate WS
+deactivate LFE
+
+@enduml
+
+@startuml SD_Chat_LoadConversations
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: Load Conversations & Messages
+
+actor "User" as User
+participant "Frontend\n(React)" as FE
+participant "MessageService\n(Frontend)" as MsgSvc
+participant "Flask API\n(/api/messages)" as API
+database "MySQL\nDatabase" as DB
+
+== Load Conversation List ==
+
+User -> FE: Open Messages page
+activate FE
+
+FE -> MsgSvc: getConversations(userId)
+activate MsgSvc
+
+MsgSvc -> API: GET /api/messages/conversations\n?user_id=123
+activate API
+
+API -> DB: SELECT conversations\nwith last_message,\nunread_count for user
+activate DB
+DB --> API: Conversation list
+deactivate DB
+
+API --> MsgSvc: Conversation[]\n{user_id, user_name, avatar,\nlast_message, unread_count}
+deactivate API
+
+MsgSvc --> FE: Conversations
+deactivate MsgSvc
+
+FE --> User: Display conversation list\nwith unread badges
+
+== Load Specific Conversation ==
+
+User -> FE: Select a conversation
+activate FE
+
+FE -> MsgSvc: getMessages(userId,\notherUserId, limit, offset)
+activate MsgSvc
+
+MsgSvc -> API: GET /api/messages/{otherUserId}\n?user_id=123&limit=50
+activate API
+
+API -> DB: SELECT messages\nWHERE (sender_id, receiver_id)\nORDER BY created_at DESC
+activate DB
+DB --> API: Message list
+deactivate DB
+
+API --> MsgSvc: Message[]\n{id, sender_id, receiver_id,\ncontent, is_read, created_at}
+deactivate API
+
+MsgSvc --> FE: Messages
+deactivate MsgSvc
+
+FE -> FE: Display messages\nin chat window
+
+FE -> MsgSvc: markAllRead(userId, otherUserId)
+activate MsgSvc
+MsgSvc -> API: PUT /api/messages/read-all/{otherUserId}
+API -> DB: UPDATE messages\nSET is_read = true
+DB --> API: OK
+API --> MsgSvc: Success
+MsgSvc --> FE: Done
+deactivate MsgSvc
+
+FE --> User: Show conversation\n(unread badge cleared)
+deactivate FE
+
+@enduml
+
+@startuml SD_VideoCall
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: Video Call (Mentor calls Learner)
+
+actor "Mentor" as Mentor
+actor "Learner" as Learner
+participant "Mentor\nFrontend" as MFE
+participant "Learner\nFrontend" as LFE
+participant "SocketService\n(Frontend)" as SocketSvc
+participant "Flask API\n(/api/video)" as API
+participant "WebSocket\nServer" as WS
+participant "Jitsi Meet\nServer" as Jitsi
+database "MySQL\nDatabase" as DB
+
+== Initiate Video Call ==
+
+Mentor -> MFE: Click "Call Learner"
+activate MFE
+
+MFE -> API: POST /api/video/create-room\n{booking_id, mentor_id, learner_id}
+activate API
+
+API -> API: Generate unique\nroom_name
+
+API -> DB: Store video session\n(room_name, booking_id, status)
+activate DB
+DB --> API: OK
+deactivate DB
+
+API --> MFE: VideoRoom\n{room_name, jitsi_domain, join_url}
+deactivate API
+
+MFE -> SocketSvc: callUser(callerId, callerName,\ncallerAvatar, targetUserId, roomName)
+activate SocketSvc
+
+SocketSvc -> WS: emit('call_user', {...})
+activate WS
+
+WS -> WS: Find learner in\nconnected_users
+
+alt Learner is online
+    WS -> LFE: emit('incoming_call',\n{callerId, callerName,\ncallerAvatar, roomName})
+    activate LFE
+    
+    LFE -> LFE: Show IncomingCallModal\n(ring sound)
+    LFE --> Learner: Display incoming call\nnotification
+    
+    WS --> SocketSvc: emit('call_sent',\n{status: 'ringing'})
+    SocketSvc --> MFE: Call sent confirmation
+    MFE --> Mentor: Show "Calling..."
+    
+    == Learner Accepts Call ==
+    
+    Learner -> LFE: Click "Accept"
+    
+    LFE -> SocketSvc: acceptCall(callerId,\ntargetUserId, roomName)
+    activate SocketSvc
+    
+    SocketSvc -> WS: emit('call_accepted', {...})
+    
+    WS -> MFE: emit('call_accepted',\n{roomName})
+    
+    SocketSvc --> LFE: Done
+    deactivate SocketSvc
+    
+    LFE -> LFE: Open VideoCallModal\nwith Jitsi room
+    LFE -> Jitsi: Join room\n(roomName)
+    Jitsi --> LFE: Connected
+    
+    deactivate LFE
+    
+    MFE -> MFE: Open VideoCallModal\nwith Jitsi room
+    MFE -> Jitsi: Join room\n(roomName)
+    Jitsi --> MFE: Connected
+    
+    MFE --> Mentor: Video call started
+    
+else Learner is offline
+    WS --> SocketSvc: emit('call_failed',\n{reason: 'User is offline'})
+    SocketSvc --> MFE: Call failed
+    MFE --> Mentor: Show error\n"Learner is offline"
+end
+
+deactivate WS
+deactivate SocketSvc
+deactivate MFE
+
+@enduml
+
+@startuml SD_VideoCall_Declined
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: Video Call Declined
+
+actor "Mentor" as Mentor
+actor "Learner" as Learner
+participant "Mentor\nFrontend" as MFE
+participant "Learner\nFrontend" as LFE
+participant "SocketService" as SocketSvc
+participant "WebSocket\nServer" as WS
+
+== Call in Progress (Ringing) ==
+
+note over MFE, LFE: Call already initiated\n(see main Video Call diagram)
+
+== Learner Declines Call ==
+
+Learner -> LFE: Click "Decline"
+activate LFE
+
+LFE -> SocketSvc: declineCall(callerId,\ntargetUserId, reason)
+activate SocketSvc
+
+SocketSvc -> WS: emit('call_declined',\n{callerId, targetUserId, reason})
+activate WS
+
+WS -> WS: Find caller in\nconnected_users
+
+WS -> MFE: emit('call_declined',\n{targetUserId, reason})
+activate MFE
+
+MFE -> MFE: Close calling modal
+MFE --> Mentor: Show notification\n"Call was declined"
+
+deactivate MFE
+deactivate WS
+
+LFE -> LFE: Close IncomingCallModal
+LFE --> Learner: Call declined
+
+deactivate SocketSvc
+deactivate LFE
+
+@enduml
+
+@startuml SD_VideoCall_End
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: End Video Call
+
+actor "User\n(Mentor/Learner)" as User
+participant "Frontend\n(React)" as FE
+participant "VideoService" as VidSvc
+participant "Flask API\n(/api/video)" as API
+participant "Jitsi Meet\nServer" as Jitsi
+database "MySQL\nDatabase" as DB
+
+== End Video Call ==
+
+User -> FE: Click "End Call"
+activate FE
+
+FE -> Jitsi: Leave room
+activate Jitsi
+Jitsi --> FE: Disconnected
+deactivate Jitsi
+
+FE -> VidSvc: endRoom(bookingId)
+activate VidSvc
+
+VidSvc -> API: POST /api/video/room/{bookingId}/end
+activate API
+
+API -> DB: UPDATE video_session\nSET status = 'ended',\nended_at = NOW()
+activate DB
+DB --> API: OK
+deactivate DB
+
+opt Update booking status
+    API -> DB: UPDATE mentor_booking\nSET status = 'completed'
+    DB --> API: OK
+end
+
+API --> VidSvc: 200 OK\n{message: "Room ended"}
+deactivate API
+
+VidSvc --> FE: Success
+deactivate VidSvc
+
+FE -> FE: Close VideoCallModal
+
+FE --> User: Return to dashboard\n(show feedback form)
+deactivate FE
+
+@enduml

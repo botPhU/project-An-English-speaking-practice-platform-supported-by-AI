@@ -1,0 +1,736 @@
+{
+    "topics": {
+        "daily": {
+            "name": "Daily Conversation",
+            "vocabulary": {
+                "basic": [
+                    {
+                        "word": "morning",
+                        "ipa": "/ˈmɔːnɪŋ/",
+                        "vietnamese": "buổi sáng",
+                        "example": "Good morning!",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "evening",
+                        "ipa": "/ˈiːvnɪŋ/",
+                        "vietnamese": "buổi tối",
+                        "example": "I relax in the evening",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "weather",
+                        "ipa": "/ˈweðər/",
+                        "vietnamese": "thời tiết",
+                        "example": "The weather is nice",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "breakfast",
+                        "ipa": "/ˈbrekfəst/",
+                        "vietnamese": "bữa sáng",
+                        "example": "I have breakfast at 7am",
+                        "cefr": "A1"
+                    }
+                ],
+                "intermediate": [
+                    {
+                        "word": "routine",
+                        "ipa": "/ruːˈtiːn/",
+                        "vietnamese": "thói quen",
+                        "example": "My daily routine starts early",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "commute",
+                        "ipa": "/kəˈmjuːt/",
+                        "vietnamese": "đi lại hàng ngày",
+                        "example": "I commute by bus",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "schedule",
+                        "ipa": "/ˈʃedjuːl/",
+                        "vietnamese": "lịch trình",
+                        "example": "My schedule is busy",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "productive",
+                        "ipa": "/prəˈdʌktɪv/",
+                        "vietnamese": "hiệu quả",
+                        "example": "Today was very productive",
+                        "cefr": "B2"
+                    }
+                ],
+                "advanced": [
+                    {
+                        "word": "hectic",
+                        "ipa": "/ˈhektɪk/",
+                        "vietnamese": "bận rộn, hối hả",
+                        "example": "I had a hectic day",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "mundane",
+                        "ipa": "/mʌnˈdeɪn/",
+                        "vietnamese": "tầm thường, nhàm chán",
+                        "example": "Mundane tasks can be boring",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "unwind",
+                        "ipa": "/ʌnˈwaɪnd/",
+                        "vietnamese": "thư giãn",
+                        "example": "I like to unwind after work",
+                        "cefr": "C1"
+                    }
+                ],
+                "idioms": [
+                    {
+                        "phrase": "hit the sack",
+                        "meaning": "đi ngủ",
+                        "example": "I'm tired, I'm going to hit the sack"
+                    },
+                    {
+                        "phrase": "bright and early",
+                        "meaning": "sáng sớm",
+                        "example": "I wake up bright and early"
+                    },
+                    {
+                        "phrase": "a night owl",
+                        "meaning": "người thức khuya",
+                        "example": "I'm a night owl, I stay up late"
+                    }
+                ],
+                "collocations": [
+                    {
+                        "phrase": "have breakfast/lunch/dinner",
+                        "vietnamese": "ăn sáng/trưa/tối",
+                        "example": "I usually have breakfast at 7am"
+                    },
+                    {
+                        "phrase": "take a shower",
+                        "vietnamese": "tắm",
+                        "example": "I take a shower every morning"
+                    },
+                    {
+                        "phrase": "get dressed",
+                        "vietnamese": "mặc quần áo",
+                        "example": "I get dressed quickly"
+                    }
+                ]
+            }
+        },
+        "business": {
+            "name": "Business English",
+            "vocabulary": {
+                "basic": [
+                    {
+                        "word": "office",
+                        "ipa": "/ˈɒfɪs/",
+                        "vietnamese": "văn phòng",
+                        "example": "I work in an office",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "meeting",
+                        "ipa": "/ˈmiːtɪŋ/",
+                        "vietnamese": "cuộc họp",
+                        "example": "We have a meeting today",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "email",
+                        "ipa": "/ˈiːmeɪl/",
+                        "vietnamese": "thư điện tử",
+                        "example": "Please send me an email",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "manager",
+                        "ipa": "/ˈmænɪdʒər/",
+                        "vietnamese": "quản lý",
+                        "example": "My manager is helpful",
+                        "cefr": "A2"
+                    }
+                ],
+                "intermediate": [
+                    {
+                        "word": "deadline",
+                        "ipa": "/ˈdedlaɪn/",
+                        "vietnamese": "hạn chót",
+                        "example": "The deadline is tomorrow",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "negotiate",
+                        "ipa": "/nɪˈɡəʊʃieɪt/",
+                        "vietnamese": "đàm phán",
+                        "example": "We need to negotiate the price",
+                        "cefr": "B2"
+                    },
+                    {
+                        "word": "proposal",
+                        "ipa": "/prəˈpəʊzl/",
+                        "vietnamese": "đề xuất",
+                        "example": "I sent a proposal to the client",
+                        "cefr": "B2"
+                    },
+                    {
+                        "word": "collaborate",
+                        "ipa": "/kəˈlæbəreɪt/",
+                        "vietnamese": "hợp tác",
+                        "example": "We collaborate with other teams",
+                        "cefr": "B2"
+                    }
+                ],
+                "advanced": [
+                    {
+                        "word": "synergy",
+                        "ipa": "/ˈsɪnədʒi/",
+                        "vietnamese": "sức mạnh tổng hợp",
+                        "example": "Our synergy creates great results",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "scalable",
+                        "ipa": "/ˈskeɪləbl/",
+                        "vietnamese": "có thể mở rộng",
+                        "example": "We need a scalable solution",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "stakeholder",
+                        "ipa": "/ˈsteɪkhəʊldər/",
+                        "vietnamese": "bên liên quan",
+                        "example": "We must inform all stakeholders",
+                        "cefr": "C1"
+                    }
+                ],
+                "idioms": [
+                    {
+                        "phrase": "think outside the box",
+                        "meaning": "suy nghĩ sáng tạo",
+                        "example": "We need to think outside the box"
+                    },
+                    {
+                        "phrase": "get the ball rolling",
+                        "meaning": "bắt đầu",
+                        "example": "Let's get the ball rolling on this project"
+                    },
+                    {
+                        "phrase": "back to square one",
+                        "meaning": "bắt đầu lại từ đầu",
+                        "example": "The plan failed, we're back to square one"
+                    }
+                ],
+                "collocations": [
+                    {
+                        "phrase": "make a decision",
+                        "vietnamese": "đưa ra quyết định",
+                        "example": "We need to make a decision soon"
+                    },
+                    {
+                        "phrase": "reach an agreement",
+                        "vietnamese": "đạt được thỏa thuận",
+                        "example": "We reached an agreement with the client"
+                    },
+                    {
+                        "phrase": "meet the deadline",
+                        "vietnamese": "hoàn thành đúng hạn",
+                        "example": "We must meet the deadline"
+                    }
+                ]
+            }
+        },
+        "travel": {
+            "name": "Travel",
+            "vocabulary": {
+                "basic": [
+                    {
+                        "word": "airport",
+                        "ipa": "/ˈeəpɔːt/",
+                        "vietnamese": "sân bay",
+                        "example": "I'm at the airport",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "hotel",
+                        "ipa": "/həʊˈtel/",
+                        "vietnamese": "khách sạn",
+                        "example": "I booked a hotel",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "ticket",
+                        "ipa": "/ˈtɪkɪt/",
+                        "vietnamese": "vé",
+                        "example": "I need a ticket",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "passport",
+                        "ipa": "/ˈpɑːspɔːt/",
+                        "vietnamese": "hộ chiếu",
+                        "example": "Don't forget your passport",
+                        "cefr": "A1"
+                    }
+                ],
+                "intermediate": [
+                    {
+                        "word": "itinerary",
+                        "ipa": "/aɪˈtɪnərəri/",
+                        "vietnamese": "lịch trình",
+                        "example": "Here's our itinerary",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "accommodation",
+                        "ipa": "/əˌkɒməˈdeɪʃn/",
+                        "vietnamese": "chỗ ở",
+                        "example": "I found cheap accommodation",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "destination",
+                        "ipa": "/ˌdestɪˈneɪʃn/",
+                        "vietnamese": "điểm đến",
+                        "example": "Our destination is Paris",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "luggage",
+                        "ipa": "/ˈlʌɡɪdʒ/",
+                        "vietnamese": "hành lý",
+                        "example": "Please check your luggage",
+                        "cefr": "B1"
+                    }
+                ],
+                "advanced": [
+                    {
+                        "word": "jet lag",
+                        "ipa": "/ˈdʒet læɡ/",
+                        "vietnamese": "lệch múi giờ",
+                        "example": "I'm suffering from jet lag",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "layover",
+                        "ipa": "/ˈleɪəʊvər/",
+                        "vietnamese": "quá cảnh",
+                        "example": "We have a 3-hour layover",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "embark",
+                        "ipa": "/ɪmˈbɑːk/",
+                        "vietnamese": "bắt đầu hành trình",
+                        "example": "We embark on a new adventure",
+                        "cefr": "C1"
+                    }
+                ],
+                "idioms": [
+                    {
+                        "phrase": "off the beaten path",
+                        "meaning": "nơi ít người biết đến",
+                        "example": "I like places off the beaten path"
+                    },
+                    {
+                        "phrase": "travel light",
+                        "meaning": "mang ít đồ",
+                        "example": "I prefer to travel light"
+                    },
+                    {
+                        "phrase": "catch a flight",
+                        "meaning": "bắt chuyến bay",
+                        "example": "I need to catch a flight at 6am"
+                    }
+                ],
+                "collocations": [
+                    {
+                        "phrase": "book a flight",
+                        "vietnamese": "đặt vé máy bay",
+                        "example": "I booked a flight to London"
+                    },
+                    {
+                        "phrase": "go sightseeing",
+                        "vietnamese": "đi tham quan",
+                        "example": "Let's go sightseeing tomorrow"
+                    },
+                    {
+                        "phrase": "check in/out",
+                        "vietnamese": "làm thủ tục nhận/trả phòng",
+                        "example": "We need to check out by 11am"
+                    }
+                ]
+            }
+        },
+        "interview": {
+            "name": "Job Interview",
+            "vocabulary": {
+                "basic": [
+                    {
+                        "word": "job",
+                        "ipa": "/dʒɒb/",
+                        "vietnamese": "công việc",
+                        "example": "I'm looking for a job",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "salary",
+                        "ipa": "/ˈsæləri/",
+                        "vietnamese": "lương",
+                        "example": "What's the salary?",
+                        "cefr": "A2"
+                    },
+                    {
+                        "word": "experience",
+                        "ipa": "/ɪkˈspɪəriəns/",
+                        "vietnamese": "kinh nghiệm",
+                        "example": "I have 3 years of experience",
+                        "cefr": "A2"
+                    },
+                    {
+                        "word": "skill",
+                        "ipa": "/skɪl/",
+                        "vietnamese": "kỹ năng",
+                        "example": "My main skill is coding",
+                        "cefr": "A2"
+                    }
+                ],
+                "intermediate": [
+                    {
+                        "word": "qualification",
+                        "ipa": "/ˌkwɒlɪfɪˈkeɪʃn/",
+                        "vietnamese": "bằng cấp",
+                        "example": "I have the right qualifications",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "responsibility",
+                        "ipa": "/rɪˌspɒnsəˈbɪləti/",
+                        "vietnamese": "trách nhiệm",
+                        "example": "My responsibilities include...",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "achievement",
+                        "ipa": "/əˈtʃiːvmənt/",
+                        "vietnamese": "thành tích",
+                        "example": "My biggest achievement was...",
+                        "cefr": "B2"
+                    },
+                    {
+                        "word": "candidate",
+                        "ipa": "/ˈkændɪdət/",
+                        "vietnamese": "ứng viên",
+                        "example": "I'm the best candidate",
+                        "cefr": "B2"
+                    }
+                ],
+                "advanced": [
+                    {
+                        "word": "leverage",
+                        "ipa": "/ˈlevərɪdʒ/",
+                        "vietnamese": "tận dụng",
+                        "example": "I can leverage my skills",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "proactive",
+                        "ipa": "/prəʊˈæktɪv/",
+                        "vietnamese": "chủ động",
+                        "example": "I'm a proactive employee",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "resilient",
+                        "ipa": "/rɪˈzɪliənt/",
+                        "vietnamese": "kiên cường",
+                        "example": "I'm resilient under pressure",
+                        "cefr": "C1"
+                    }
+                ],
+                "idioms": [
+                    {
+                        "phrase": "land a job",
+                        "meaning": "được nhận việc",
+                        "example": "I hope to land this job"
+                    },
+                    {
+                        "phrase": "go the extra mile",
+                        "meaning": "nỗ lực thêm",
+                        "example": "I always go the extra mile"
+                    },
+                    {
+                        "phrase": "hit the ground running",
+                        "meaning": "bắt đầu làm việc ngay",
+                        "example": "I can hit the ground running"
+                    }
+                ],
+                "collocations": [
+                    {
+                        "phrase": "apply for a job",
+                        "vietnamese": "nộp đơn xin việc",
+                        "example": "I applied for the job online"
+                    },
+                    {
+                        "phrase": "work under pressure",
+                        "vietnamese": "làm việc dưới áp lực",
+                        "example": "I can work under pressure"
+                    },
+                    {
+                        "phrase": "meet expectations",
+                        "vietnamese": "đáp ứng kỳ vọng",
+                        "example": "I always meet expectations"
+                    }
+                ]
+            }
+        },
+        "academic": {
+            "name": "Academic English",
+            "vocabulary": {
+                "basic": [
+                    {
+                        "word": "study",
+                        "ipa": "/ˈstʌdi/",
+                        "vietnamese": "học",
+                        "example": "I study every day",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "class",
+                        "ipa": "/klɑːs/",
+                        "vietnamese": "lớp học",
+                        "example": "I have class at 9am",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "homework",
+                        "ipa": "/ˈhəʊmwɜːk/",
+                        "vietnamese": "bài tập về nhà",
+                        "example": "I do my homework",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "teacher",
+                        "ipa": "/ˈtiːtʃər/",
+                        "vietnamese": "giáo viên",
+                        "example": "My teacher is helpful",
+                        "cefr": "A1"
+                    }
+                ],
+                "intermediate": [
+                    {
+                        "word": "research",
+                        "ipa": "/rɪˈsɜːtʃ/",
+                        "vietnamese": "nghiên cứu",
+                        "example": "I'm doing research",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "assignment",
+                        "ipa": "/əˈsaɪnmənt/",
+                        "vietnamese": "bài tập",
+                        "example": "The assignment is due Friday",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "lecture",
+                        "ipa": "/ˈlektʃər/",
+                        "vietnamese": "bài giảng",
+                        "example": "The lecture was interesting",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "analyze",
+                        "ipa": "/ˈænəlaɪz/",
+                        "vietnamese": "phân tích",
+                        "example": "We need to analyze the data",
+                        "cefr": "B2"
+                    }
+                ],
+                "advanced": [
+                    {
+                        "word": "hypothesis",
+                        "ipa": "/haɪˈpɒθəsɪs/",
+                        "vietnamese": "giả thuyết",
+                        "example": "My hypothesis was correct",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "methodology",
+                        "ipa": "/ˌmeθəˈdɒlədʒi/",
+                        "vietnamese": "phương pháp luận",
+                        "example": "Our methodology is rigorous",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "empirical",
+                        "ipa": "/ɪmˈpɪrɪkl/",
+                        "vietnamese": "thực nghiệm",
+                        "example": "We need empirical evidence",
+                        "cefr": "C1"
+                    }
+                ],
+                "idioms": [
+                    {
+                        "phrase": "burn the midnight oil",
+                        "meaning": "thức khuya học",
+                        "example": "I'm burning the midnight oil for exams"
+                    },
+                    {
+                        "phrase": "learn by heart",
+                        "meaning": "học thuộc lòng",
+                        "example": "I learned it by heart"
+                    },
+                    {
+                        "phrase": "crack the books",
+                        "meaning": "bắt đầu học chăm",
+                        "example": "Time to crack the books"
+                    }
+                ],
+                "collocations": [
+                    {
+                        "phrase": "do research",
+                        "vietnamese": "làm nghiên cứu",
+                        "example": "I'm doing research on AI"
+                    },
+                    {
+                        "phrase": "take notes",
+                        "vietnamese": "ghi chép",
+                        "example": "I take notes during lectures"
+                    },
+                    {
+                        "phrase": "submit an assignment",
+                        "vietnamese": "nộp bài tập",
+                        "example": "I submitted my assignment on time"
+                    }
+                ]
+            }
+        },
+        "free": {
+            "name": "Free Conversation",
+            "vocabulary": {
+                "basic": [
+                    {
+                        "word": "hello",
+                        "ipa": "/həˈləʊ/",
+                        "vietnamese": "xin chào",
+                        "example": "Hello, how are you?",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "friend",
+                        "ipa": "/frend/",
+                        "vietnamese": "bạn",
+                        "example": "You're my friend",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "happy",
+                        "ipa": "/ˈhæpi/",
+                        "vietnamese": "vui vẻ",
+                        "example": "I'm happy to meet you",
+                        "cefr": "A1"
+                    },
+                    {
+                        "word": "interesting",
+                        "ipa": "/ˈɪntrəstɪŋ/",
+                        "vietnamese": "thú vị",
+                        "example": "That's interesting",
+                        "cefr": "A2"
+                    }
+                ],
+                "intermediate": [
+                    {
+                        "word": "opinion",
+                        "ipa": "/əˈpɪnjən/",
+                        "vietnamese": "ý kiến",
+                        "example": "In my opinion...",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "experience",
+                        "ipa": "/ɪkˈspɪəriəns/",
+                        "vietnamese": "trải nghiệm",
+                        "example": "It was a great experience",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "recommend",
+                        "ipa": "/ˌrekəˈmend/",
+                        "vietnamese": "giới thiệu",
+                        "example": "I recommend this book",
+                        "cefr": "B1"
+                    },
+                    {
+                        "word": "perspective",
+                        "ipa": "/pəˈspektɪv/",
+                        "vietnamese": "góc nhìn",
+                        "example": "From my perspective...",
+                        "cefr": "B2"
+                    }
+                ],
+                "advanced": [
+                    {
+                        "word": "nuance",
+                        "ipa": "/ˈnjuːɑːns/",
+                        "vietnamese": "sắc thái",
+                        "example": "There are many nuances",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "eloquent",
+                        "ipa": "/ˈeləkwənt/",
+                        "vietnamese": "hùng biện",
+                        "example": "She's very eloquent",
+                        "cefr": "C1"
+                    },
+                    {
+                        "word": "profound",
+                        "ipa": "/prəˈfaʊnd/",
+                        "vietnamese": "sâu sắc",
+                        "example": "That's a profound idea",
+                        "cefr": "C1"
+                    }
+                ],
+                "idioms": [
+                    {
+                        "phrase": "break the ice",
+                        "meaning": "phá vỡ sự lạnh nhạt",
+                        "example": "Let me break the ice"
+                    },
+                    {
+                        "phrase": "speak your mind",
+                        "meaning": "nói thẳng",
+                        "example": "Feel free to speak your mind"
+                    },
+                    {
+                        "phrase": "food for thought",
+                        "meaning": "điều đáng suy nghĩ",
+                        "example": "That's food for thought"
+                    }
+                ],
+                "collocations": [
+                    {
+                        "phrase": "have a conversation",
+                        "vietnamese": "trò chuyện",
+                        "example": "Let's have a conversation"
+                    },
+                    {
+                        "phrase": "share an opinion",
+                        "vietnamese": "chia sẻ ý kiến",
+                        "example": "Can I share my opinion?"
+                    },
+                    {
+                        "phrase": "make a point",
+                        "vietnamese": "nêu quan điểm",
+                        "example": "I want to make a point"
+                    }
+                ]
+            }
+        }
+    }
+}

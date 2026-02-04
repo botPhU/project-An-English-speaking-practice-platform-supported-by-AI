@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+/* Custom Theme Colors for AESP */
+@theme {
+  --color-primary: #2b8cee;
+  --color-primary-dark: #1a6fc2;
+  --color-background-light: #f6f7f8;
+  --color-background-dark: #111418;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #1c2127;
+  --color-border-dark: #3b4754;
+  --color-text-secondary: #9dabb9;
+  --color-accent-green: #0bda5b;
+  --color-accent-orange: #ff9800;
+}
+
+/* Base styles */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'Lexend', 'Manrope', 'Noto Sans', sans-serif;
+}
+
+/* Dark mode base */
+.dark body,
+.dark {
+  background-color: #111418;
+  color: #ffffff;
+}
+
+/* Light mode base */
+body {
+  background-color: #f6f7f8;
+  color: #111418;
+}
+
+/* Form input resets for Tailwind */
+input:focus {
+  outline: none;
+}
+
+/* Fix text colors for stat cards - use dark text in light mode, white in dark mode */
+.text-3xl.font-bold {
+  color: #111418;
+}
+
+.dark .text-3xl.font-bold {
+  color: #ffffff;
+}
+
+/* Size utilities */
+.size-2 {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.size-3 {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.size-8 {
+  width: 2rem;
+  height: 2rem;
+}
+
+.size-10 {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.size-12 {
+  width: 3rem;
+  height: 3rem;
+}
+
+.size-16 {
+  width: 4rem;
+  height: 4rem;
+}
+
+/* Custom Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #111418;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #283039;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3b4754;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}

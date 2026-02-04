@@ -1,0 +1,268 @@
+@startuml SD_Feedback_Create
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: Mentor Creates Feedback for Learner
+
+actor "Mentor" as Mentor
+participant "Mentor\nFrontend" as MFE
+participant "FeedbackService\n(Frontend)" as FbSvc
+participant "Flask API\n(/api/feedback)" as API
+database "MySQL\nDatabase" as DB
+participant "WebSocket\nServer" as WS
+participant "Learner\nFrontend" as LFE
+actor "Learner" as Learner
+
+== Create Feedback After Session ==
+
+Mentor -> MFE: Open Feedback Form\n(after session ends)
+activate MFE
+
+MFE --> Mentor: Display feedback form\n(scores + comments)
+
+Mentor -> MFE: Fill form:\n- Pronunciation Score (1-10)\n- Grammar Score (1-10)\n- Vocabulary Score (1-10)\n- Fluency Score (1-10)\n- Strengths\n- Areas for Improvement\n- Recommendations
+
+Mentor -> MFE: Click "Submit Feedback"
+
+MFE -> MFE: Calculate overall_score\n= average(all scores)
+
+MFE -> FbSvc: createFeedback({\nmentor_id, learner_id,\nsession_id, scores,\ncomments})
+activate FbSvc
+
+FbSvc -> API: POST /api/feedback/\n{mentor_id, learner_id,\nsession_id, pronunciation_score,\ngrammar_score, vocabulary_score,\nfluency_score, overall_score,\nstrengths, improvements,\nrecommendations}
+activate API
+
+API -> DB: INSERT INTO mentor_feedback\n(mentor_id, learner_id,\nsession_id, scores,\ncomments, created_at)
+activate DB
+DB --> API: new_feedback.id
+deactivate DB
+
+API -> API: Prepare response with\nmentor & learner names
+
+API --> FbSvc: 201 Created\n{id, feedback details}
+deactivate API
+
+' Real-time notification
+API -> WS: Notify learner\nabout new feedback
+activate WS
+WS -> LFE: emit('new_feedback',\n{feedback_id, mentor_name})
+activate LFE
+LFE --> Learner: Show notification\n"New feedback received!"
+deactivate LFE
+deactivate WS
+
+FbSvc --> MFE: Success
+deactivate FbSvc
+
+MFE --> Mentor: Show success message\n"Feedback submitted!"
+deactivate MFE
+
+@enduml
+
+@startuml SD_Feedback_ViewProgress
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: View Learner Progress & Feedbacks
+
+actor "User\n(Learner/Mentor)" as User
+participant "Frontend\n(React)" as FE
+participant "FeedbackService\n(Frontend)" as FbSvc
+participant "Flask API\n(/api/feedback)" as API
+database "MySQL\nDatabase" as DB
+
+== View Learner's Progress ==
+
+User -> FE: Open Progress Page
+activate FE
+
+FE -> FbSvc: getLearnerProgress(learnerId)
+activate FbSvc
+
+FbSvc -> API: GET /api/feedback/progress/{learnerId}
+activate API
+
+API -> DB: Query total_sessions\nfrom practice_session
+activate DB
+DB --> API: Session count
+deactivate DB
+
+API -> DB: Query skill_averages\nfrom mentor_feedback
+activate DB
+DB --> API: Skill averages\n(pronunciation, grammar,\nvocabulary, fluency)
+deactivate DB
+
+API -> DB: Query recent sessions\n& feedbacks
+activate DB
+DB --> API: Recent data
+deactivate DB
+
+API -> DB: Query progress record\n(streak, level, minutes)
+activate DB
+DB --> API: Progress data
+deactivate DB
+
+API --> FbSvc: LearnerProgress {\n  total_sessions,\n  skill_averages,\n  recent_sessions,\n  recent_feedbacks,\n  current_level,\n  streak_days,\n  total_practice_minutes\n}
+deactivate API
+
+FbSvc --> FE: Progress data
+deactivate FbSvc
+
+FE -> FE: Render progress dashboard\nwith charts & metrics
+
+FE --> User: Display:\n- Skill radar chart\n- Session history\n- Recent feedbacks\n- Streak & level
+deactivate FE
+
+== View Specific Feedback Details ==
+
+User -> FE: Click on a feedback item
+activate FE
+
+FE -> FbSvc: getLearnerFeedbacks(learnerId)
+activate FbSvc
+
+FbSvc -> API: GET /api/feedback/learner/{learnerId}
+activate API
+
+API -> DB: SELECT feedbacks\nWITH mentor details
+activate DB
+DB --> API: Feedback list
+deactivate DB
+
+API --> FbSvc: Feedback[] with details
+deactivate API
+
+FbSvc --> FE: Feedbacks
+deactivate FbSvc
+
+FE --> User: Display feedback details:\n- Scores breakdown\n- Mentor comments\n- Recommendations
+deactivate FE
+
+@enduml
+
+@startuml SD_Rating_Mentor
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: Learner Rates Mentor
+
+actor "Learner" as Learner
+participant "Learner\nFrontend" as LFE
+participant "MentorService\n(Frontend)" as MentorSvc
+participant "Flask API\n(/api/mentor)" as API
+database "MySQL\nDatabase" as DB
+
+== Rate Mentor After Session ==
+
+Learner -> LFE: View completed booking
+activate LFE
+
+LFE --> Learner: Show "Rate Mentor" option
+
+Learner -> LFE: Click "Rate Mentor"
+
+LFE --> Learner: Display rating form\n(stars + comment)
+
+Learner -> LFE: Submit rating:\n- Stars (1-5)\n- Comment (optional)
+
+LFE -> MentorSvc: rateMentor({\nmentor_id, learner_id,\nbooking_id, rating, comment})
+activate MentorSvc
+
+MentorSvc -> API: POST /api/mentor/{mentorId}/rate\n{learner_id, booking_id,\nrating, comment}
+activate API
+
+API -> DB: INSERT INTO mentor_rating\n(mentor_id, learner_id,\nbooking_id, rating,\ncomment, created_at)
+activate DB
+DB --> API: new_rating.id
+deactivate DB
+
+API -> DB: Calculate new average\nfor mentor
+activate DB
+DB --> API: New avg_rating
+deactivate DB
+
+API -> DB: UPDATE flask_user\nSET avg_rating = new_avg\nWHERE id = mentor_id
+activate DB
+DB --> API: OK
+deactivate DB
+
+API --> MentorSvc: 201 Created\n{message, new_avg_rating}
+deactivate API
+
+MentorSvc --> LFE: Rating submitted
+deactivate MentorSvc
+
+LFE --> Learner: Show success\n"Thank you for your feedback!"
+deactivate LFE
+
+@enduml
+
+@startuml SD_Rating_ViewMentor
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: View Mentor Ratings
+
+actor "User" as User
+participant "Frontend\n(React)" as FE
+participant "MentorService\n(Frontend)" as MentorSvc
+participant "Flask API\n(/api/mentor)" as API
+database "MySQL\nDatabase" as DB
+
+== View Mentor Profile with Ratings ==
+
+User -> FE: Open Mentor Profile
+activate FE
+
+FE -> MentorSvc: getMentorProfile(mentorId)
+activate MentorSvc
+
+MentorSvc -> API: GET /api/mentor/{mentorId}
+activate API
+
+API -> DB: SELECT mentor info\nWITH calculated avg_rating
+activate DB
+DB --> API: Mentor profile
+deactivate DB
+
+API --> MentorSvc: MentorProfile {\n  id, name, avatar,\n  specializations,\n  avg_rating,\n  total_ratings,\n  total_sessions\n}
+deactivate API
+
+MentorSvc --> FE: Profile data
+deactivate MentorSvc
+
+FE -> MentorSvc: getMentorRatings(mentorId)
+activate MentorSvc
+
+MentorSvc -> API: GET /api/mentor/{mentorId}/ratings
+activate API
+
+API -> DB: SELECT ratings\nWITH learner names
+activate DB
+DB --> API: Rating list
+deactivate DB
+
+API --> MentorSvc: Rating[] sorted by date
+deactivate API
+
+MentorSvc --> FE: Ratings
+deactivate MentorSvc
+
+FE --> User: Display mentor profile:\n- Stars visualization\n- Recent reviews\n- Rating breakdown
+deactivate FE
+
+@enduml
