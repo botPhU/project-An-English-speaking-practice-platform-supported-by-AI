@@ -1,10 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import progressTrackingService, {
   ProgressStreak,
   WeeklyProgress,
   LearningGoal,
+  ProgressTrackingError,
 } from '../../services/progressTrackingService';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 import './ProgressOverview.css';
 
 interface ProgressOverviewProps {
@@ -23,14 +35,19 @@ const ProgressOverview: React.FC<ProgressOverviewProps> = ({
   const [goals, setGoals] = useState<LearningGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const maxRetries = 3;
 
   useEffect(() => {
     fetchProgressData();
   }, []);
 
-  const fetchProgressData = async () => {
+  const fetchProgressData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+
       const [streakData, weeklyData, goalsData] = await Promise.all([
         progressTrackingService.getProgressStreak(),
         progressTrackingService.getWeeklyProgress(4),
@@ -40,37 +57,76 @@ const ProgressOverview: React.FC<ProgressOverviewProps> = ({
       setStreak(streakData);
       setWeeklyData(weeklyData);
       setGoals(goalsData);
+      setRetryCount(0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load progress data');
+      const errorMessage =
+        err instanceof ProgressTrackingError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Failed to load progress data';
+
+      setError(errorMessage);
+      console.error('Error fetching progress data:', err);
+
+      // Retry logic
+      if (retryCount < maxRetries) {
+        setTimeout(() => {
+          setRetryCount(retryCount + 1);
+          fetchProgressData();
+        }, 2000 * (retryCount + 1)); // Exponential backoff
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [retryCount]);
 
-  const handleCompleteGoal = async (goalId: string) => {
-    try {
-      await progressTrackingService.completeLearningGoal(goalId);
-      fetchProgressData();
-    } catch (err) {
-      console.error('Error completing goal:', err);
-    }
-  };
+  const handleCompleteGoal = useCallback(
+    async (goalId: string) => {
+      try {
+        await progressTrackingService.completeLearningGoal(goalId);
+        await fetchProgressData();
+      } catch (err) {
+        console.error('Error completing goal:', err);
+        setError('Failed to complete goal. Please try again.');
+      }
+    },
+    [fetchProgressData]
+  );
 
-  const handleDeleteGoal = async (goalId: string) => {
-    try {
-      await progressTrackingService.deleteLearningGoal(goalId);
-      fetchProgressData();
-    } catch (err) {
-      console.error('Error deleting goal:', err);
-    }
-  };
+  const handleDeleteGoal = useCallback(
+    async (goalId: string) => {
+      try {
+        await progressTrackingService.deleteLearningGoal(goalId);
+        await fetchProgressData();
+      } catch (err) {
+        console.error('Error deleting goal:', err);
+        setError('Failed to delete goal. Please try again.');
+      }
+    },
+    [fetchProgressData]
+  );
 
-  if (loading) {
+  // Memoize goal stats
+  const goalsStats = useMemo(() => {
+    const completed = goals.filter((g) => g.status === 'completed').length;
+    const inProgress = goals.filter((g) => g.status === 'active').length;
+    return { completed, inProgress, total: goals.length };
+  }, [goals]);
+
+  if (loading && retryCount === 0) {
     return <div className="progress-overview loading">Loading progress data...</div>;
   }
 
-  if (error) {
-    return <div className="progress-overview error">Error: {error}</div>;
+  if (error && retryCount >= maxRetries) {
+    return (
+      <div className="progress-overview error">
+        <p>Error: {error}</p>
+        <button onClick={() => { setRetryCount(0); fetchProgressData(); }} className="btn-retry">
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -139,56 +195,66 @@ const ProgressOverview: React.FC<ProgressOverviewProps> = ({
         )}
 
         {/* Learning Goals Section */}
-        {showGoals && goals.length > 0 && (
+        {showGoals && (
           <div className="goals-section card">
-            <h3>🎯 Learning Goals</h3>
-            <div className="goals-list">
-              {goals.map((goal) => (
-                <div key={goal.id} className="goal-item">
-                  <div className="goal-header">
-                    <h4>{goal.title}</h4>
-                    <span className="goal-category">{goal.category}</span>
-                  </div>
-                  <p className="goal-description">{goal.description}</p>
-                  <div className="progress-bar-container">
-                    <div className="progress-bar">
-                      <div
-                        className="progress-fill"
-                        style={{
-                          width: `${Math.min((goal.currentValue / goal.targetValue) * 100, 100)}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="progress-text">
-                      {goal.currentValue} / {goal.targetValue}
-                    </span>
-                  </div>
-                  <div className="goal-footer">
-                    <span className="due-date">Due: {new Date(goal.dueDate).toLocaleDateString()}</span>
-                    <div className="goal-actions">
-                      <button
-                        className="btn-complete"
-                        onClick={() => handleCompleteGoal(goal.id)}
-                      >
-                        ✓ Complete
-                      </button>
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDeleteGoal(goal.id)}
-                      >
-                        × Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="goals-header">
+              <h3>🎯 Learning Goals</h3>
+              <span className="goals-badge">
+                {goalsStats.inProgress} active • {goalsStats.completed} completed
+              </span>
             </div>
-          </div>
-        )}
 
-        {goals.length === 0 && showGoals && (
-          <div className="empty-state card">
-            <p>No active learning goals yet. Create one to get started! 🚀</p>
+            {goals.length > 0 ? (
+              <div className="goals-list">
+                {goals.map((goal) => (
+                  <div key={goal.id} className="goal-item">
+                    <div className="goal-header">
+                      <h4>{goal.title}</h4>
+                      <span className="goal-category">{goal.category}</span>
+                    </div>
+                    <p className="goal-description">{goal.description}</p>
+                    <div className="progress-bar-container">
+                      <div className="progress-bar">
+                        <div
+                          className="progress-fill"
+                          style={{
+                            width: `${Math.min((goal.currentValue / goal.targetValue) * 100, 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="progress-text">
+                        {goal.currentValue} / {goal.targetValue}
+                      </span>
+                    </div>
+                    <div className="goal-footer">
+                      <span className="due-date">
+                        Due: {new Date(goal.dueDate).toLocaleDateString()}
+                      </span>
+                      <div className="goal-actions">
+                        <button
+                          className="btn-complete"
+                          onClick={() => handleCompleteGoal(goal.id)}
+                          aria-label={`Complete goal ${goal.title}`}
+                        >
+                          ✓ Complete
+                        </button>
+                        <button
+                          className="btn-delete"
+                          onClick={() => handleDeleteGoal(goal.id)}
+                          aria-label={`Delete goal ${goal.title}`}
+                        >
+                          × Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p>No active learning goals yet. Create one to get started! 🚀</p>
+              </div>
+            )}
           </div>
         )}
       </div>
