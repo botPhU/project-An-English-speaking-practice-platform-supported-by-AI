@@ -1,0 +1,270 @@
+import { useState, useEffect } from 'react';
+import MentorLayout from '../../layouts/MentorLayout';
+import { useAuth } from '../../context/AuthContext';
+import { mentorService } from '../../services/mentorService';
+
+interface PracticeSession {
+    id: number;
+    learner_id: number;
+    learner_name: string;
+    topic: string;
+    session_type: string;
+    duration_minutes: number;
+    started_at: string | null;
+    ended_at: string | null;
+    pronunciation_score: number | null;
+    grammar_score: number | null;
+    vocabulary_score: number | null;
+    fluency_score: number | null;
+    overall_score: number | null;
+    has_audio: boolean;
+}
+
+// Feedback Session - Phản hồi sau khi luyện tập
+export default function FeedbackSession() {
+    const { user } = useAuth();
+    const [sessions, setSessions] = useState<PracticeSession[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [playingSessionId, setPlayingSessionId] = useState<number | null>(null);
+
+    useEffect(() => {
+        fetchSessions();
+    }, []);
+
+    const fetchSessions = async () => {
+        if (!user) return;
+
+        try {
+            const response = await mentorService.getPracticeSessions(parseInt(user.id));
+            setSessions(response.data.sessions || []);
+        } catch (error) {
+            console.error('Failed to fetch sessions:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const formatDate = (dateStr: string | null) => {
+        if (!dateStr) return 'N/A';
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = now.getTime() - date.getTime();
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (days === 0) {
+            return `Hôm nay, ${date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+        } else if (days === 1) {
+            return `Hôm qua, ${date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+        } else if (days < 7) {
+            return `${days} ngày trước`;
+        } else {
+            return date.toLocaleDateString('vi-VN');
+        }
+    };
+
+    const feedbackTemplates = [
+        { name: 'Pronunciation Focus', icon: 'record_voice_over', count: 12 },
+        { name: 'Grammar Correction', icon: 'spellcheck', count: 18 },
+        { name: 'Vocabulary Building', icon: 'menu_book', count: 8 },
+        { name: 'Fluency Improvement', icon: 'speed', count: 6 },
+        { name: 'Confidence Boost', icon: 'emoji_events', count: 10 },
+    ];
+
+    const pendingCount = sessions.filter(s => !s.overall_score).length;
+    const completedCount = sessions.filter(s => s.overall_score).length;
+    const avgScore = sessions.length > 0
+        ? (sessions.reduce((acc, s) => acc + (s.overall_score || 0), 0) / sessions.filter(s => s.overall_score).length).toFixed(1)
+        : '0';
+
+    return (
+        <MentorLayout
+            title="Phản hồi & Đánh giá"
+            icon="rate_review"
+            subtitle="Nghe bản ghi âm của học viên và cho phản hồi"
+        >
+            <div className="max-w-[1200px] mx-auto flex flex-col gap-6 pb-10">
+                {/* Quick Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div className="flex flex-col justify-between gap-2 rounded-xl p-5 bg-[#283039] border border-[#3e4854]/30 hover:border-[#3e4854] transition-colors">
+                        <div className="flex justify-between items-start">
+                            <p className="text-[#9dabb9] text-sm font-medium">Tổng phiên</p>
+                            <span className="material-symbols-outlined text-primary text-xl">history</span>
+                        </div>
+                        <p className="text-white text-3xl font-bold leading-tight">{sessions.length}</p>
+                    </div>
+                    <div className="flex flex-col justify-between gap-2 rounded-xl p-5 bg-[#283039] border border-[#3e4854]/30 hover:border-[#3e4854] transition-colors">
+                        <div className="flex justify-between items-start">
+                            <p className="text-[#9dabb9] text-sm font-medium">Chờ phản hồi</p>
+                            <span className="material-symbols-outlined text-yellow-400 text-xl">pending</span>
+                        </div>
+                        <p className="text-white text-3xl font-bold leading-tight">{pendingCount}</p>
+                    </div>
+                    <div className="flex flex-col justify-between gap-2 rounded-xl p-5 bg-[#283039] border border-[#3e4854]/30 hover:border-[#3e4854] transition-colors">
+                        <div className="flex justify-between items-start">
+                            <p className="text-[#9dabb9] text-sm font-medium">Đã đánh giá</p>
+                            <span className="material-symbols-outlined text-green-400 text-xl">check_circle</span>
+                        </div>
+                        <p className="text-white text-3xl font-bold leading-tight">{completedCount}</p>
+                    </div>
+                    <div className="flex flex-col justify-between gap-2 rounded-xl p-5 bg-[#283039] border border-[#3e4854]/30 hover:border-[#3e4854] transition-colors">
+                        <div className="flex justify-between items-start">
+                            <p className="text-[#9dabb9] text-sm font-medium">Điểm TB</p>
+                            <span className="material-symbols-outlined text-primary text-xl">star</span>
+                        </div>
+                        <p className="text-white text-3xl font-bold leading-tight">{avgScore}</p>
+                    </div>
+                </div>
+
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Session List */}
+                    <div className="lg:col-span-2 rounded-xl bg-[#283039] border border-[#3e4854]/30 overflow-hidden">
+                        <div className="flex items-center justify-between p-5 border-b border-[#3e4854]/30">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Phiên luyện tập của học viên</h3>
+                                <p className="text-sm text-[#9dabb9]">Nghe ghi âm và cho phản hồi</p>
+                            </div>
+                            <button
+                                onClick={fetchSessions}
+                                className="p-2 rounded-lg bg-[#3e4854]/30 text-[#9dabb9] hover:bg-[#3e4854]/50 hover:text-white transition-colors"
+                            >
+                                <span className="material-symbols-outlined">refresh</span>
+                            </button>
+                        </div>
+
+                        {loading ? (
+                            <div className="p-10 text-center">
+                                <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3"></div>
+                                <p className="text-[#9dabb9]">Đang tải...</p>
+                            </div>
+                        ) : sessions.length === 0 ? (
+                            <div className="p-10 text-center">
+                                <span className="material-symbols-outlined text-4xl text-[#3e4854] mb-2">inbox</span>
+                                <p className="text-[#9dabb9]">Chưa có phiên luyện tập nào</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-[#3e4854]/30">
+                                {sessions.map((session) => (
+                                    <div key={session.id} className="p-5 hover:bg-[#3e4854]/10 transition-colors">
+                                        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                                            <div className="flex items-center gap-4 flex-1">
+                                                <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                                                    {session.learner_name.split(' ').pop()?.charAt(0) || 'L'}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h4 className="font-bold text-white">{session.learner_name}</h4>
+                                                        {session.has_audio && (
+                                                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">
+                                                                🎙️ Có ghi âm
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm text-[#9dabb9]">{session.topic || 'Chủ đề tự do'}</p>
+                                                    <p className="text-xs text-[#9dabb9]/70">{formatDate(session.ended_at)}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-6">
+                                                {/* Scores */}
+                                                <div className="flex gap-3">
+                                                    <div className="text-center">
+                                                        <span className="text-primary font-bold">{session.pronunciation_score || '--'}</span>
+                                                        <p className="text-[10px] text-[#9dabb9]">Phát âm</p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="text-yellow-400 font-bold">{session.grammar_score || '--'}</span>
+                                                        <p className="text-[10px] text-[#9dabb9]">Ngữ pháp</p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="text-blue-400 font-bold">{session.vocabulary_score || '--'}</span>
+                                                        <p className="text-[10px] text-[#9dabb9]">Từ vựng</p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="text-green-400 font-bold">{session.overall_score || '--'}</span>
+                                                        <p className="text-[10px] text-[#9dabb9]">Tổng</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="flex gap-2">
+                                                    {session.has_audio && (
+                                                        <button
+                                                            onClick={() => setPlayingSessionId(playingSessionId === session.id ? null : session.id)}
+                                                            className={`p-2 rounded-lg transition-colors ${playingSessionId === session.id
+                                                                    ? 'bg-primary text-white'
+                                                                    : 'bg-[#3e4854]/30 text-[#9dabb9] hover:bg-[#3e4854]/50 hover:text-white'
+                                                                }`}
+                                                        >
+                                                            <span className="material-symbols-outlined">
+                                                                {playingSessionId === session.id ? 'pause' : 'play_arrow'}
+                                                            </span>
+                                                        </button>
+                                                    )}
+                                                    <button className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors">
+                                                        Viết phản hồi
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Audio Player */}
+                                        {playingSessionId === session.id && session.has_audio && (
+                                            <div className="mt-4 p-3 bg-[#1a222a] rounded-xl">
+                                                <audio
+                                                    controls
+                                                    className="w-full"
+                                                    src={mentorService.getSessionAudioUrl(session.id)}
+                                                    autoPlay
+                                                >
+                                                    Your browser does not support the audio element.
+                                                </audio>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="space-y-4">
+                        {/* Feedback Templates */}
+                        <div className="rounded-xl bg-[#283039] border border-[#3e4854]/30 p-5">
+                            <h3 className="font-bold text-white mb-4">Mẫu phản hồi</h3>
+                            <div className="space-y-2">
+                                {feedbackTemplates.map((template, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex items-center justify-between p-3 rounded-lg bg-[#3e4854]/20 hover:bg-[#3e4854]/30 transition-colors cursor-pointer group"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <span className="material-symbols-outlined text-primary">{template.icon}</span>
+                                            <span className="text-sm font-medium text-white group-hover:text-primary transition-colors">{template.name}</span>
+                                        </div>
+                                        <span className="text-xs text-[#9dabb9]">{template.count}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <button className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary/20 text-primary font-medium hover:bg-primary hover:text-white transition-all">
+                                <span className="material-symbols-outlined text-lg">add</span>
+                                Tạo mẫu mới
+                            </button>
+                        </div>
+
+                        {/* Quick Tips */}
+                        <div className="rounded-xl bg-primary/10 border border-primary/20 p-5">
+                            <h3 className="font-bold text-white mb-3">💡 Mẹo phản hồi</h3>
+                            <ul className="space-y-2 text-sm text-[#9dabb9]">
+                                <li>• Nghe kỹ bản ghi âm trước khi viết</li>
+                                <li>• Bắt đầu bằng điểm tích cực</li>
+                                <li>• Chỉ rõ lỗi và cách sửa cụ thể</li>
+                                <li>• Kết thúc với lời động viên</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </MentorLayout>
+    );
+}

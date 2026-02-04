@@ -1,0 +1,153 @@
+@startuml CD_Chat_VideoCall
+skinparam backgroundColor white
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+title Class Diagram: Chat & Video Call
+
+package "Frontend" {
+    class "MessageService" as MsgSvc {
+        +getConversations(userId)
+        +getMessages(userId, otherUserId)
+        +sendMessage(senderId, receiverId, content)
+        +markAsRead(messageId, userId)
+        +markAllRead(userId, otherUserId)
+        +getUnreadCount(userId)
+    }
+
+    class "VideoService" as VidSvc {
+        +createRoom(bookingId, mentorId, learnerId)
+        +getRoom(bookingId)
+        +endRoom(bookingId)
+    }
+
+    class "SocketService" as SocketSvc {
+        -socket: Socket
+        -userId: string
+        -onlineUsers: Set<string>
+        +connect()
+        +disconnect()
+        +emitUserOnline(userId)
+        +callUser(callerId, targetUserId, roomName)
+        +acceptCall(callerId, roomName)
+        +declineCall(callerId, reason)
+        +onIncomingCall(callback)
+        +onCallAccepted(callback)
+    }
+
+    class "ChatModal" as ChatModal <<Component>> {
+        -messages: Message[]
+        -newMessage: string
+        +sendMessage()
+        +loadMessages()
+    }
+
+    class "VideoCallModal" as VideoCallModal <<Component>> {
+        -roomName: string
+        -isConnected: boolean
+        +joinRoom()
+        +endCall()
+    }
+
+    class "IncomingCallModal" as IncomingCallModal <<Component>> {
+        -callerName: string
+        -callerAvatar: string
+        +acceptCall()
+        +declineCall()
+    }
+}
+
+package "Backend API" {
+    class "MessageController" as MsgCtrl <<Blueprint>> {
+        +get_conversations(): GET
+        +get_messages(): GET
+        +send_message(): POST
+        +mark_as_read(): PUT
+    }
+
+    class "VideoController" as VidCtrl <<Blueprint>> {
+        +create_room(): POST
+        +get_room(): GET
+        +end_room(): POST
+    }
+
+    class "WebSocket" as WS <<SocketIO>> {
+        -connected_users: Dict
+        +handle_connect()
+        +handle_disconnect()
+        +handle_user_online(data)
+        +handle_call_user(data)
+        +handle_call_accepted(data)
+        +handle_call_declined(data)
+        +broadcast_user_status(user_id, status)
+    }
+}
+
+package "Domain Models" {
+    class "MessageModel" as Message {
+        +id: Integer <<PK>>
+        +sender_id: Integer <<FK>>
+        +receiver_id: Integer <<FK>>
+        --
+        +content: Text
+        +is_read: Boolean
+        +read_at: DateTime
+        +created_at: DateTime
+        --
+        +to_dict()
+    }
+
+    class "Conversation" as Conversation <<DTO>> {
+        +user_id: Integer
+        +user_name: String
+        +avatar: String
+        +last_message: String
+        +last_message_time: DateTime
+        +unread_count: Integer
+    }
+
+    class "VideoRoom" as VideoRoom <<DTO>> {
+        +room_name: String
+        +jitsi_domain: String
+        +join_url: String
+        +booking_id: Integer
+        +status: String
+    }
+
+    class "UserModel" as User {
+        +id: Integer <<PK>>
+        +user_name: String
+        +full_name: String
+        +avatar_url: String
+    }
+}
+
+package "External Services" {
+    class "Jitsi Meet" as Jitsi <<External>> {
+        +join(roomName)
+        +leave()
+    }
+}
+
+' Relationships
+ChatModal --> MsgSvc : uses
+ChatModal --> SocketSvc : real-time updates
+VideoCallModal --> VidSvc : uses
+VideoCallModal --> Jitsi : video/audio
+IncomingCallModal --> SocketSvc : events
+
+MsgSvc --> MsgCtrl : HTTP calls
+VidSvc --> VidCtrl : HTTP calls
+SocketSvc --> WS : WebSocket
+
+MsgCtrl --> Message : manages
+VidCtrl --> VideoRoom : creates
+
+Message "n" --> "1" User : sender
+Message "n" --> "1" User : receiver
+
+Conversation --> Message : aggregates
+Conversation --> User : references
+
+@enduml

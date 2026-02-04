@@ -1,0 +1,262 @@
+@startuml SD_Login
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: User Login
+
+actor "User\n(Learner/Mentor/Admin)" as User
+participant "Frontend\n(React)" as FE
+participant "AuthService\n(Frontend)" as AuthSvc
+participant "Flask API\n(/api/auth)" as API
+database "MySQL\nDatabase" as DB
+participant "WebSocket\nServer" as WS
+
+== Successful Login Flow ==
+
+User -> FE: Enter username & password
+activate FE
+
+FE -> FE: Validate input\n(check empty fields)
+
+FE -> AuthSvc: login(userName, password)
+activate AuthSvc
+
+AuthSvc -> API: POST /api/auth/login\n{user_name, password}
+activate API
+
+API -> DB: Query UserModel\nby user_name
+activate DB
+DB --> API: User record
+deactivate DB
+
+alt User does not exist
+    API --> AuthSvc: 401 Unauthorized\n{error: "Invalid username or password"}
+    AuthSvc --> FE: Throw error
+    FE --> User: Display error message\n"Login failed"
+else User exists
+    API -> API: Verify password\n(bcrypt compare)
+    
+    alt Password incorrect
+        API --> AuthSvc: 401 Unauthorized
+        AuthSvc --> FE: Throw error
+        FE --> User: Display error message
+    else Password correct
+        API -> API: Check user.status\n(account active?)
+        
+        alt Account disabled
+            API --> AuthSvc: 403 Forbidden\n{error: "Account is disabled"}
+        else Account active
+            API -> DB: Update last_login = NOW()
+            activate DB
+            DB --> API: OK
+            deactivate DB
+            
+            opt Role = Learner
+                API -> DB: Get/Create ProgressModel
+                activate DB
+                DB --> API: Progress record
+                deactivate DB
+                API -> API: Calculate streak\n(consecutive login days)
+                API -> DB: Update current_streak,\nlongest_streak
+                activate DB
+                DB --> API: OK
+                deactivate DB
+            end
+            
+            API -> API: Generate JWT\naccess_token & refresh_token
+            
+            API --> AuthSvc: 200 OK\n{access_token, refresh_token, user}
+            deactivate API
+            
+            API -> WS: notify_user_login(user_id)
+            activate WS
+            WS -> WS: Broadcast "user_online"\nto connected clients
+            deactivate WS
+            
+            AuthSvc -> AuthSvc: localStorage.setItem\n('accessToken', 'refreshToken')
+            AuthSvc --> FE: AuthResponse
+            deactivate AuthSvc
+            
+            FE -> FE: AuthContext.login(user, token)
+            FE -> FE: Determine redirect path\nby user role
+            
+            FE --> User: Navigate to Dashboard\n(Admin/Mentor/Learner)
+            deactivate FE
+        end
+    end
+end
+
+@enduml
+
+@startuml SD_Register
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: User Registration
+
+actor "New User\n(Learner)" as User
+participant "Frontend\n(React)" as FE
+participant "AuthService\n(Frontend)" as AuthSvc
+participant "Flask API\n(/api/auth)" as API
+database "MySQL\nDatabase" as DB
+
+== New Account Registration ==
+
+User -> FE: Fill registration form\n(username, email, password,\nfull_name, confirmPassword)
+activate FE
+
+FE -> FE: Validate form:\n- Required fields\n- password == confirmPassword\n- password.length >= 6
+
+alt Validation failed
+    FE --> User: Display validation error
+else Validation successful
+    FE -> AuthSvc: register({user_name, email,\npassword, full_name, role: 'learner'})
+    activate AuthSvc
+    
+    AuthSvc -> API: POST /api/auth/register\n{user_name, email, password, full_name, role}
+    activate API
+    
+    API -> API: Validate required fields\n(user_name, password)
+    
+    API -> DB: Check existing user\nWHERE user_name = ? OR email = ?
+    activate DB
+    DB --> API: Result
+    deactivate DB
+    
+    alt Username/Email already exists
+        API --> AuthSvc: 409 Conflict\n{error: "Username or email already exists"}
+        AuthSvc --> FE: Throw error
+        FE --> User: Display error\n"Account already exists"
+    else Does not exist
+        API -> API: Hash password\n(bcrypt)
+        
+        API -> DB: INSERT INTO flask_user\n(user_name, email, password,\nfull_name, role, status,\ncreated_at, updated_at)
+        activate DB
+        DB --> API: new_user.id
+        deactivate DB
+        
+        API -> API: Generate JWT\naccess_token & refresh_token
+        
+        API --> AuthSvc: 201 Created\n{message, user, access_token, refresh_token}
+        deactivate API
+        
+        AuthSvc -> AuthSvc: localStorage.setItem\n('accessToken', 'refreshToken')
+        
+        AuthSvc --> FE: Response
+        deactivate AuthSvc
+        
+        FE --> User: Navigate to\n/complete-profile
+        deactivate FE
+    end
+end
+
+@enduml
+
+@startuml SD_Logout
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: User Logout
+
+actor "User" as User
+participant "Frontend\n(React)" as FE
+participant "AuthService\n(Frontend)" as AuthSvc
+participant "Flask API\n(/api/auth)" as API
+participant "WebSocket\nServer" as WS
+
+User -> FE: Click "Logout"
+activate FE
+
+FE -> AuthSvc: logout()
+activate AuthSvc
+
+AuthSvc -> API: POST /api/auth/logout\nHeader: Authorization: Bearer <token>
+activate API
+
+API -> API: Extract token\nfrom header
+
+API -> API: GetCurrentUser(token)\nDecode JWT
+
+API -> API: Revoke token\n(add to blacklist)
+
+API --> AuthSvc: 200 OK\n{message: "Logout successful"}
+deactivate API
+
+API -> WS: notify_user_logout(user_id)
+activate WS
+WS -> WS: Broadcast "user_offline"\nto connected clients
+deactivate WS
+
+AuthSvc -> AuthSvc: localStorage.removeItem\n('accessToken', 'refreshToken')
+
+AuthSvc --> FE: Success
+deactivate AuthSvc
+
+FE -> FE: AuthContext.logout()
+FE --> User: Navigate to /login
+deactivate FE
+
+@enduml
+
+@startuml SD_RefreshToken
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam monochrome true
+skinparam shadowing false
+
+title Sequence Diagram: Refresh Token
+
+participant "Frontend\n(React)" as FE
+participant "AuthService\n(Frontend)" as AuthSvc
+participant "Flask API\n(/api/auth)" as API
+
+== Access Token Expired ==
+
+FE -> API: API call with\nexpired access_token
+activate FE
+activate API
+API --> FE: 401 Unauthorized
+deactivate API
+
+FE -> FE: Detect 401 error
+
+FE -> AuthSvc: refreshToken(refresh_token)
+activate AuthSvc
+
+AuthSvc -> API: POST /api/auth/refresh\n{refresh_token}
+activate API
+
+API -> API: Validate refresh_token\n(decode & verify)
+
+alt Refresh token valid
+    API -> API: Generate new\naccess_token & refresh_token
+    API --> AuthSvc: 200 OK\n{access_token, refresh_token, expires_in}
+    deactivate API
+    
+    AuthSvc -> AuthSvc: Update localStorage\nwith new tokens
+    AuthSvc --> FE: New tokens
+    deactivate AuthSvc
+    
+    FE -> FE: Retry original request\nwith new access_token
+else Refresh token invalid/expired
+    API --> AuthSvc: 401 Unauthorized
+    AuthSvc --> FE: Error
+    FE -> FE: Clear all tokens
+    FE --> FE: Navigate to /login
+end
+
+deactivate FE
+
+@enduml
