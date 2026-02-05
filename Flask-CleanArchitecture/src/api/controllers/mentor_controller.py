@@ -138,9 +138,10 @@ def share_resource():
 })
 def submit_review():
     """Submit a review for a mentor (by learner)"""
+    db_session = None
     try:
         from infrastructure.models.review_model import ReviewModel
-        from infrastructure.databases.mssql import session as db_session
+        from infrastructure.databases.mssql import SessionLocal
         from datetime import datetime
         
         data = request.get_json()
@@ -151,10 +152,16 @@ def submit_review():
         if not data.get('rating') or not (1 <= data.get('rating') <= 5):
             return jsonify({'error': 'rating phải từ 1 đến 5'}), 400
         
+        # Create new session for this request
+        db_session = SessionLocal()
+        
         review = ReviewModel(
             learner_id=data.get('learner_id'),
             mentor_id=data.get('mentor_id'),
+            reviewer_id=data.get('learner_id'),  # learner is the reviewer
+            reviewed_id=data.get('mentor_id'),   # mentor is being reviewed
             session_id=data.get('session_id'),
+            session_type='mentor',
             booking_id=data.get('booking_id'),
             rating=data.get('rating'),
             comment=data.get('comment'),
@@ -164,14 +171,21 @@ def submit_review():
         db_session.add(review)
         db_session.commit()
         
+        review_id = review.id
+        
         return jsonify({
-            'id': review.id,
+            'id': review_id,
             'message': 'Đánh giá đã được gửi thành công!'
         }), 201
         
     except Exception as e:
+        if db_session:
+            db_session.rollback()
         print(f"[SUBMIT_REVIEW] Error: {e}")
         return jsonify({'error': str(e)}), 500
+    finally:
+        if db_session:
+            db_session.close()
 
 
 @mentor_bp.route('/reviews/<int:mentor_id>', methods=['GET'])

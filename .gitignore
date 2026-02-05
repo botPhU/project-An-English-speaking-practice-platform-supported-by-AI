@@ -67,3 +67,18 @@ generate_*.py
 tatus*
 *_test.py
 test_*.py
+check*.py
+debug*.py
+debug*.txt
+fix*.py
+fix*.txt
+sync*.py
+complete_fix.py
+create_reviews_table.py
+
+# API response files
+api_response*.json
+
+# Database backups
+*.sql
+database_backup.sql

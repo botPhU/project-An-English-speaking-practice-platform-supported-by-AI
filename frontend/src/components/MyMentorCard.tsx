@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { assignmentService } from '../services/assignmentService';
 import { feedbackService } from '../services/feedbackService';
+import { mentorService } from '../services/mentorService';
 import type { Feedback } from '../services/feedbackService';
 import ChatModal from './ChatModal';
 import { socketService } from '../services/socketService';
@@ -34,6 +35,12 @@ const MyMentorCard = ({ learnerId }: MyMentorCardProps) => {
     const [loading, setLoading] = useState(true);
     const [showChatModal, setShowChatModal] = useState(false);
     const [mentorOnline, setMentorOnline] = useState(false);
+
+    // Review states
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState('');
+    const [submittingReview, setSubmittingReview] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -76,6 +83,34 @@ const MyMentorCard = ({ learnerId }: MyMentorCardProps) => {
     const handleSendMessage = () => {
         // Open chat modal directly
         setShowChatModal(true);
+    };
+
+    const handleOpenReview = () => {
+        setReviewRating(5);
+        setReviewComment('');
+        setShowReviewModal(true);
+    };
+
+    const handleSubmitReview = async () => {
+        if (!assignment) return;
+
+        try {
+            setSubmittingReview(true);
+            await mentorService.submitReview({
+                learner_id: learnerId,
+                mentor_id: assignment.mentor_id,
+                rating: reviewRating,
+                comment: reviewComment
+            });
+
+            setShowReviewModal(false);
+            alert('Đánh giá đã được gửi thành công! Cảm ơn bạn đã đánh giá.');
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            alert('Có lỗi khi gửi đánh giá. Vui lòng thử lại.');
+        } finally {
+            setSubmittingReview(false);
+        }
     };
 
     if (loading) {
@@ -167,14 +202,24 @@ const MyMentorCard = ({ learnerId }: MyMentorCardProps) => {
                 </div>
             )}
 
-            {/* Action Button */}
-            <button
-                onClick={handleSendMessage}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
-            >
-                <span className="material-symbols-outlined text-sm">chat</span>
-                Nhắn tin cho Mentor
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+                <button
+                    onClick={handleSendMessage}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                >
+                    <span className="material-symbols-outlined text-sm">chat</span>
+                    Nhắn tin
+                </button>
+                <button
+                    onClick={handleOpenReview}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-lg font-medium hover:bg-yellow-500 hover:text-white transition-colors"
+                >
+                    <span className="material-symbols-outlined text-sm">star</span>
+                    Đánh giá
+                </button>
+            </div>
+
             {/* Chat Modal */}
             {showChatModal && assignment && (
                 <ChatModal
@@ -187,6 +232,97 @@ const MyMentorCard = ({ learnerId }: MyMentorCardProps) => {
                     }}
                     onClose={() => setShowChatModal(false)}
                 />
+            )}
+
+            {/* Review Modal */}
+            {showReviewModal && assignment && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-[#283039] rounded-2xl p-6 max-w-md w-full border border-[#3e4854]">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-white">Đánh giá Mentor</h3>
+                            <button
+                                onClick={() => setShowReviewModal(false)}
+                                className="text-gray-400 hover:text-white transition-colors"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        {/* Mentor Info */}
+                        <div className="flex items-center gap-3 mb-6 p-4 bg-white/5 rounded-xl">
+                            <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                                {assignment.mentor_name?.charAt(0) || 'M'}
+                            </div>
+                            <div>
+                                <p className="font-bold text-white">{assignment.mentor_name}</p>
+                                <p className="text-sm text-gray-400">{assignment.mentor_email}</p>
+                            </div>
+                        </div>
+
+                        {/* Star Rating */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-400 mb-3">Đánh giá của bạn</label>
+                            <div className="flex gap-2 justify-center">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        onClick={() => setReviewRating(star)}
+                                        className="transition-transform hover:scale-110"
+                                    >
+                                        <span className={`material-symbols-outlined text-4xl ${star <= reviewRating ? 'text-yellow-500' : 'text-gray-600'}`}>
+                                            {star <= reviewRating ? 'star' : 'star_border'}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-center text-sm text-gray-400 mt-2">
+                                {reviewRating === 5 && 'Xuất sắc!'}
+                                {reviewRating === 4 && 'Rất tốt'}
+                                {reviewRating === 3 && 'Tốt'}
+                                {reviewRating === 2 && 'Trung bình'}
+                                {reviewRating === 1 && 'Cần cải thiện'}
+                            </p>
+                        </div>
+
+                        {/* Comment */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Nhận xét (tùy chọn)</label>
+                            <textarea
+                                value={reviewComment}
+                                onChange={(e) => setReviewComment(e.target.value)}
+                                placeholder="Chia sẻ trải nghiệm của bạn với Mentor..."
+                                className="w-full h-24 px-4 py-3 rounded-xl bg-[#1a2230] border border-[#3e4854] text-white placeholder-gray-500 focus:border-primary outline-none resize-none"
+                            />
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowReviewModal(false)}
+                                className="flex-1 px-4 py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-colors"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleSubmitReview}
+                                disabled={submittingReview}
+                                className="flex-1 px-4 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {submittingReview ? (
+                                    <>
+                                        <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                                        Đang gửi...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined">send</span>
+                                        Gửi đánh giá
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
