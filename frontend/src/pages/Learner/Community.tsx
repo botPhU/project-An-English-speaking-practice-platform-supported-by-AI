@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import LearnerLayout from '../../layouts/LearnerLayout';
 import { useAuth } from '../../context/AuthContext';
 import { learnerService } from '../../services/learnerService';
+import { mentorService } from '../../services/mentorService';
 import BookingModal from '../../components/BookingModal';
 import ChatModal from '../../components/ChatModal';
 
@@ -16,6 +17,13 @@ export default function Community() {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [showChatModal, setShowChatModal] = useState(false);
     const [selectedMentor, setSelectedMentor] = useState<any>(null);
+
+    // Review states
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewSession, setReviewSession] = useState<any>(null);
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState('');
+    const [submittingReview, setSubmittingReview] = useState(false);
 
 
     useEffect(() => {
@@ -72,6 +80,40 @@ export default function Community() {
 
     // Note: API for online learners not yet implemented
     // When implemented, add API call to fetch online learners
+
+    // Open review modal for a session
+    const openReviewModal = (session: any) => {
+        setReviewSession(session);
+        setReviewRating(5);
+        setReviewComment('');
+        setShowReviewModal(true);
+    };
+
+    // Submit mentor review
+    const handleSubmitReview = async () => {
+        if (!reviewSession || !authUser?.id) return;
+
+        try {
+            setSubmittingReview(true);
+            await mentorService.submitReview({
+                learner_id: Number(authUser.id),
+                mentor_id: reviewSession.mentor_id,
+                rating: reviewRating,
+                comment: reviewComment,
+                booking_id: reviewSession.id
+            });
+
+            setShowReviewModal(false);
+            setReviewSession(null);
+            fetchData(); // Refresh sessions
+            alert('Đánh giá đã được gửi thành công!');
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            alert('Có lỗi khi gửi đánh giá. Vui lòng thử lại.');
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -253,7 +295,10 @@ export default function Community() {
                                             </button>
                                         )}
                                         {session.is_completed && !session.rating && (
-                                            <button className="px-4 py-2 rounded-lg bg-orange-500/20 text-orange-500 border border-orange-500/30 hover:bg-orange-500 hover:text-white font-bold text-sm transition-all flex items-center gap-2">
+                                            <button
+                                                onClick={() => openReviewModal(session)}
+                                                className="px-4 py-2 rounded-lg bg-orange-500/20 text-orange-500 border border-orange-500/30 hover:bg-orange-500 hover:text-white font-bold text-sm transition-all flex items-center gap-2"
+                                            >
                                                 <span className="material-symbols-outlined text-lg">star</span>
                                                 Đánh giá
                                             </button>
@@ -359,6 +404,97 @@ export default function Community() {
                         setSelectedMentor(null);
                     }}
                 />
+            )}
+
+            {/* Review Modal */}
+            {showReviewModal && reviewSession && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-surface-dark rounded-2xl p-6 max-w-md w-full border border-border-dark">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-white">Đánh giá Mentor</h3>
+                            <button
+                                onClick={() => setShowReviewModal(false)}
+                                className="text-gray-400 hover:text-white transition-colors"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        {/* Mentor Info */}
+                        <div className="flex items-center gap-3 mb-6 p-4 bg-white/5 rounded-xl">
+                            <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                                {reviewSession.mentor_name?.charAt(0) || 'M'}
+                            </div>
+                            <div>
+                                <p className="font-bold text-white">{reviewSession.mentor_name}</p>
+                                <p className="text-sm text-text-secondary">Buổi học ngày {reviewSession.scheduled_at}</p>
+                            </div>
+                        </div>
+
+                        {/* Star Rating */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-text-secondary mb-3">Đánh giá của bạn</label>
+                            <div className="flex gap-2 justify-center">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        onClick={() => setReviewRating(star)}
+                                        className="transition-transform hover:scale-110"
+                                    >
+                                        <span className={`material-symbols-outlined text-4xl ${star <= reviewRating ? 'text-yellow-500' : 'text-gray-600'}`}>
+                                            {star <= reviewRating ? 'star' : 'star_border'}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-center text-sm text-text-secondary mt-2">
+                                {reviewRating === 5 && 'Xuất sắc!'}
+                                {reviewRating === 4 && 'Rất tốt'}
+                                {reviewRating === 3 && 'Tốt'}
+                                {reviewRating === 2 && 'Trung bình'}
+                                {reviewRating === 1 && 'Cần cải thiện'}
+                            </p>
+                        </div>
+
+                        {/* Comment */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-text-secondary mb-2">Nhận xét (tùy chọn)</label>
+                            <textarea
+                                value={reviewComment}
+                                onChange={(e) => setReviewComment(e.target.value)}
+                                placeholder="Chia sẻ trải nghiệm của bạn với Mentor..."
+                                className="w-full h-24 px-4 py-3 rounded-xl bg-background-dark border border-border-dark text-white placeholder-gray-500 focus:border-primary outline-none resize-none"
+                            />
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowReviewModal(false)}
+                                className="flex-1 px-4 py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-colors"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleSubmitReview}
+                                disabled={submittingReview}
+                                className="flex-1 px-4 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {submittingReview ? (
+                                    <>
+                                        <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                                        Đang gửi...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined">send</span>
+                                        Gửi đánh giá
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </LearnerLayout>
     );

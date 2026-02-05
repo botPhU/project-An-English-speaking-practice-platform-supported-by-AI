@@ -253,3 +253,171 @@ def search_resources():
         'count': len(resources),
         'query': query
     }), 200
+
+
+# ==================== LEARNER RESOURCE ASSIGNMENTS ====================
+
+@resource_bp.route('/assign', methods=['POST'])
+def assign_resource_to_learner():
+    """
+    Assign a resource/exercise to a learner
+    ---
+    tags:
+      - Resources
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - resource_id
+            - learner_id
+            - mentor_id
+          properties:
+            resource_id:
+              type: integer
+            learner_id:
+              type: integer
+            mentor_id:
+              type: integer
+            due_date:
+              type: string
+              format: date-time
+    responses:
+      201:
+        description: Resource assigned to learner
+    """
+    data = request.get_json()
+    
+    resource_id = data.get('resource_id')
+    learner_id = data.get('learner_id')
+    mentor_id = data.get('mentor_id')
+    
+    if not all([resource_id, learner_id, mentor_id]):
+        return jsonify({'error': 'resource_id, learner_id, and mentor_id are required'}), 400
+    
+    result = ResourceService.assign_to_learner(
+        resource_id=resource_id,
+        learner_id=learner_id,
+        mentor_id=mentor_id,
+        due_date=data.get('due_date')
+    )
+    
+    if 'error' in result:
+        return jsonify(result), 400
+    
+    return jsonify(result), 201
+
+
+@resource_bp.route('/learner/<int:learner_id>/assigned', methods=['GET'])
+def get_learner_assigned_resources(learner_id: int):
+    """
+    Get all resources assigned to a learner
+    ---
+    tags:
+      - Resources
+    parameters:
+      - in: path
+        name: learner_id
+        type: integer
+        required: true
+      - in: query
+        name: status
+        type: string
+        description: Filter by status (assigned, in_progress, completed, reviewed)
+    responses:
+      200:
+        description: List of assigned resources
+    """
+    status = request.args.get('status')
+    
+    assignments = ResourceService.get_learner_assignments(
+        learner_id=learner_id,
+        status=status
+    )
+    
+    return jsonify({
+        'assignments': assignments,
+        'count': len(assignments)
+    }), 200
+
+
+@resource_bp.route('/mentor/<int:mentor_id>/assignments', methods=['GET'])
+def get_mentor_assignments(mentor_id: int):
+    """
+    Get all resource assignments made by a mentor
+    ---
+    tags:
+      - Resources
+    """
+    learner_id = request.args.get('learner_id', type=int)
+    status = request.args.get('status')
+    
+    assignments = ResourceService.get_mentor_assignments(
+        mentor_id=mentor_id,
+        learner_id=learner_id,
+        status=status
+    )
+    
+    return jsonify({
+        'assignments': assignments,
+        'count': len(assignments)
+    }), 200
+
+
+@resource_bp.route('/assignment/<int:assignment_id>', methods=['PUT'])
+def update_assignment(assignment_id: int):
+    """
+    Update assignment status, score, or feedback
+    ---
+    tags:
+      - Resources
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            score:
+              type: integer
+            mentor_feedback:
+              type: string
+            learner_notes:
+              type: string
+    responses:
+      200:
+        description: Assignment updated
+    """
+    data = request.get_json()
+    
+    result = ResourceService.update_assignment(
+        assignment_id=assignment_id,
+        status=data.get('status'),
+        score=data.get('score'),
+        mentor_feedback=data.get('mentor_feedback'),
+        learner_notes=data.get('learner_notes')
+    )
+    
+    if not result:
+        return jsonify({'error': 'Assignment not found'}), 404
+    
+    return jsonify(result), 200
+
+
+@resource_bp.route('/assignment/<int:assignment_id>', methods=['DELETE'])
+def delete_assignment(assignment_id: int):
+    """Remove a resource assignment"""
+    mentor_id = request.args.get('mentor_id', type=int)
+    
+    if not mentor_id:
+        return jsonify({'error': 'mentor_id is required'}), 400
+    
+    success = ResourceService.delete_assignment(assignment_id, mentor_id)
+    
+    if success:
+        return jsonify({'message': 'Assignment deleted'}), 200
+    
+    return jsonify({'error': 'Assignment not found or not owned by mentor'}), 404
+

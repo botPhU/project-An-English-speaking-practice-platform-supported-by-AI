@@ -1,46 +1,66 @@
-"""Create assignment for any mentor user"""
-import os, sys
-sys.path.insert(0, os.path.dirname(__file__))
+"""
+Fix assignments script - run from Flask-CleanArchitecture/src folder
+"""
+from infrastructure.databases.mssql import get_db_session
+from infrastructure.models.mentor_assignment_model import MentorAssignmentModel
+from infrastructure.models.mentor_booking_model import MentorBookingModel
+from infrastructure.models.user_model import UserModel
+from datetime import datetime
 
-from config import Config
-from sqlalchemy import create_engine, text
-
-engine = create_engine(Config.DATABASE_URI)
-
-with engine.connect() as conn:
-    print("=== ALL MENTORS ===")
-    mentors = conn.execute(text("SELECT id, user_name, full_name FROM flask_user WHERE role='mentor' ORDER BY id")).fetchall()
-    for m in mentors:
-        print(f"  ID:{m[0]} - {m[1]} ({m[2]})")
-    
-    print("\n=== ALL LEARNERS ===")
-    learners = conn.execute(text("SELECT id, user_name, full_name FROM flask_user WHERE role='learner' ORDER BY id")).fetchall()
-    for l in learners:
-        print(f"  ID:{l[0]} - {l[1]} ({l[2]})")
-    
-    print("\n=== CURRENT ASSIGNMENTS ===")
-    assigns = conn.execute(text("SELECT mentor_id, learner_id, status FROM mentor_assignments")).fetchall()
-    for a in assigns:
-        print(f"  Mentor:{a[0]} -> Learner:{a[1]} ({a[2]})")
-    
-    # Create assignments for ALL mentors if they don't have one
-    print("\n=== CREATING MISSING ASSIGNMENTS ===")
-    for mentor in mentors:
-        # Check if this mentor has any assignment
-        existing = conn.execute(text(
-            "SELECT id FROM mentor_assignments WHERE mentor_id = :mid AND status='active'"
-        ), {"mid": mentor[0]}).fetchone()
+def fix_assignments():
+    with get_db_session() as session:
+        # Get all confirmed bookings
+        print("\n📅 CONFIRMED BOOKINGS:")
+        bookings = session.query(MentorBookingModel).filter(
+            MentorBookingModel.status == 'confirmed'
+        ).all()
         
-        if not existing and len(learners) > 0:
-            # Pick a learner (cycle through)
-            learner = learners[mentor[0] % len(learners)]
-            conn.execute(text("""
-                INSERT INTO mentor_assignments (mentor_id, learner_id, assigned_by, status)
-                VALUES (:mid, :lid, 1, 'active')
-            """), {"mid": mentor[0], "lid": learner[0]})
-            print(f"  Created: Mentor {mentor[0]} ({mentor[2]}) -> Learner {learner[0]} ({learner[2]})")
+        for b in bookings:
+            learner = session.query(UserModel).get(b.learner_id)
+            mentor = session.query(UserModel).get(b.mentor_id)
+            print(f"  - Booking #{b.id}: {learner.full_name if learner else '?'} -> {mentor.full_name if mentor else '?'}")
+        
+        # Get existing assignments
+        print("\n👥 EXISTING ASSIGNMENTS:")
+        assignments = session.query(MentorAssignmentModel).filter(
+            MentorAssignmentModel.status == 'active'
+        ).all()
+        
+        if assignments:
+            for a in assignments:
+                learner = session.query(UserModel).get(a.learner_id)
+                print(f"  - Assignment #{a.id}: {learner.full_name if learner else '?'}")
         else:
-            print(f"  Mentor {mentor[0]} already has assignment")
-    
-    conn.commit()
-    print("\nDone!")
+            print("  ❌ No active assignments found!")
+        
+        # Create missing assignments
+        print("\n🔧 CREATING MISSING ASSIGNMENTS...")
+        for b in bookings:
+            existing = session.query(MentorAssignmentModel).filter(
+                MentorAssignmentModel.mentor_id == b.mentor_id,
+                MentorAssignmentModel.learner_id == b.learner_id
+            ).first()
+            
+            if not existing:
+                new_assignment = MentorAssignmentModel(
+                    mentor_id=b.mentor_id,
+                    learner_id=b.learner_id,
+                    assigned_by=b.mentor_id,
+                    status='active',
+                    notes=f"Auto-fixed from booking #{b.id}",
+                    assigned_at=datetime.now()
+                )
+                session.add(new_assignment)
+                session.flush()
+                learner = session.query(UserModel).get(b.learner_id)
+                print(f"  ✅ Created: {learner.full_name if learner else '?'}")
+            elif existing.status != 'active':
+                existing.status = 'active'
+                existing.updated_at = datetime.now()
+                learner = session.query(UserModel).get(b.learner_id)
+                print(f"  ✅ Reactivated: {learner.full_name if learner else '?'}")
+        
+        print("\n✅ Done! Refresh dashboard now.")
+
+if __name__ == '__main__':
+    fix_assignments()

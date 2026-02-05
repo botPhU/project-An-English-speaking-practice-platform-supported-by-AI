@@ -1,0 +1,57 @@
+﻿
+=== ALL USERS IN RAILWAY ===
+
+  id=1, name=Thanh Ph·, email=user1@test.com, role=learner
+  id=2, name=mentor1, email=mentor1@test.com, role=mentor
+  id=3, name=admin1, email=admin1@test.com, role=admin
+  id=11, name=Test User 2025, email=user03@gmail.com, role=learner
+  id=12, name=Test User 2025, email=a@gmail.com, role=learner
+  id=13, name=Lee Quang, email=Takao2103@gmail.com, role=learner
+.\.venv\Scripts\python.exe
+ : Traceback (most recent 
+call last):
+At line:1 char:1
++ .\.venv\Scripts\python.e
+xe debug_db.py 2>&1 | 
+Out-File -FilePath debu 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (T  
+  raceback (most recent   
+  call last)::String)     
+[], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+  File "C:\Users\Dell\Docu
+ments\project 
+cnpm\debug_db.py", line 
+19, in <module>
+    print(f"  
+id={u['id']}, 
+name={u['full_name']}, 
+email={u['email']}, 
+role={u['role']}")
+    ~~~~~^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^
+  File "C:\Users\Dell\AppD
+ata\Local\Programs\Python\
+Python313\Lib\encodings\cp
+1252.py", line 19, in 
+encode
+    return codecs.charmap_
+encode(input,self.errors,e
+ncoding_table)[0]
+           ~~~~~~~~~~~~~~~
+~~~~~~^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
+UnicodeEncodeError: 
+'charmap' codec can't 
+encode character '\u1ec5' 
+in position 18: character 
+maps to <undefined>

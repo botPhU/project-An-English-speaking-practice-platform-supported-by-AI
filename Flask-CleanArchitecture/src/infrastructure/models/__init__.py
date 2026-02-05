@@ -7,4 +7,5 @@ from infrastructure.models.notification_model import NotificationModel
 from infrastructure.models.mentor_booking_model import MentorBookingModel
 from infrastructure.models.review_model import ReviewModel
 from infrastructure.models.speaking_session_model import SpeakingSession, SpeakingMessage
-
+from infrastructure.models.resource_model import ResourceModel
+from infrastructure.models.learner_resource_model import LearnerResourceModel

@@ -43,17 +43,19 @@ const MyLearnerCard = ({ mentorId, mentorName, mentorAvatar }: MyLearnerCardProp
     const [roomName, setRoomName] = useState('');
     const [calling, setCalling] = useState(false);
 
+
+
     const fetchData = useCallback(async () => {
+        console.log('[MyLearnerCard v2.0] Fetching for mentorId:', mentorId);
         if (mentorId <= 0) return;
 
         try {
             setLoading(true);
             const assignmentData = await assignmentService.getMyLearner(mentorId);
+            console.log('[MyLearnerCard v2.0] Got data:', assignmentData?.length, 'items');
 
-            // API now returns array
             if (Array.isArray(assignmentData) && assignmentData.length > 0) {
                 setAssignments(assignmentData);
-                // Auto-select first learner
                 setSelectedLearner(assignmentData[0]);
                 const progressData = await feedbackService.getLearnerProgress(assignmentData[0].learner_id);
                 setProgress(progressData);
@@ -63,7 +65,7 @@ const MyLearnerCard = ({ mentorId, mentorName, mentorAvatar }: MyLearnerCardProp
                 setProgress(null);
             }
         } catch (error) {
-            console.error('Error fetching learner data:', error);
+            console.error('[MyLearnerCard v2.0] Error:', error);
             setAssignments([]);
             setSelectedLearner(null);
             setProgress(null);
@@ -169,17 +171,7 @@ const MyLearnerCard = ({ mentorId, mentorName, mentorAvatar }: MyLearnerCardProp
     }
 
     if (assignments.length === 0) {
-        return (
-            <div className="rounded-xl bg-gradient-to-br from-[#283039] to-[#1a2230] border border-[#3e4854]/30 p-6">
-                <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-700/50 rounded-full flex items-center justify-center">
-                        <span className="material-symbols-outlined text-3xl text-gray-500">person_off</span>
-                    </div>
-                    <h3 className="text-lg font-bold text-white mb-2">Chưa có học viên</h3>
-                    <p className="text-sm text-gray-400">Khi bạn xác nhận lịch hẹn, học viên sẽ xuất hiện ở đây</p>
-                </div>
-            </div>
-        );
+        return null; // Don't show anything when no learners
     }
 
     return (
@@ -200,8 +192,8 @@ const MyLearnerCard = ({ mentorId, mentorName, mentorAvatar }: MyLearnerCardProp
                                 key={a.id}
                                 onClick={() => handleSelectLearner(a)}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${selectedLearner?.id === a.id
-                                        ? 'bg-primary text-white'
-                                        : 'bg-[#3e4854]/50 text-gray-300 hover:bg-[#3e4854]'
+                                    ? 'bg-primary text-white'
+                                    : 'bg-[#3e4854]/50 text-gray-300 hover:bg-[#3e4854]'
                                     }`}
                             >
                                 <div className="w-6 h-6 rounded-full bg-primary/30 flex items-center justify-center text-xs">

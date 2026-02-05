@@ -69,7 +69,8 @@ export const assignmentService = {
         const response = await api.get('/assignments/mentor/my-learner', {
             params: { mentor_id: mentorId }
         });
-        return response.data;
+        // Handle both array and object responses
+        return Array.isArray(response.data) ? response.data : (response.data?.data || []);
     },
 
     // Learner endpoint

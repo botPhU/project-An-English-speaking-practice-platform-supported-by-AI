@@ -840,31 +840,44 @@ class LearnerService:
                     
                     if booking.status == 'confirmed':
                         # Auto-create MentorAssignment so learner appears in mentor's "Học viên của tôi"
-                        from infrastructure.models.mentor_assignment_model import MentorAssignmentModel
+                        try:
+                            from infrastructure.models.mentor_assignment_model import MentorAssignmentModel
+                            
+                            print(f"[BOOKING] Attempting to create assignment: mentor={booking.mentor_id}, learner={booking.learner_id}")
+                            
+                            # Check if assignment already exists for this mentor-learner pair
+                            existing_assignment = session.query(MentorAssignmentModel).filter(
+                                MentorAssignmentModel.mentor_id == booking.mentor_id,
+                                MentorAssignmentModel.learner_id == booking.learner_id
+                            ).first()
+                            
+                            if not existing_assignment:
+                                # Create new assignment
+                                new_assignment = MentorAssignmentModel(
+                                    mentor_id=booking.mentor_id,
+                                    learner_id=booking.learner_id,
+                                    assigned_by=booking.mentor_id,  # Mentor assigns via booking confirmation
+                                    status='active',
+                                    notes=f"Assigned via booking #{booking_id}",
+                                    assigned_at=datetime.now()
+                                )
+                                session.add(new_assignment)
+                                session.flush()  # Ensure assignment is persisted
+                                print(f"[BOOKING] ✅ Created MentorAssignment: mentor={booking.mentor_id}, learner={booking.learner_id}")
+                            elif existing_assignment.status != 'active':
+                                # Reactivate existing assignment
+                                existing_assignment.status = 'active'
+                                existing_assignment.updated_at = datetime.now()
+                                session.flush()  # Ensure update is persisted
+                                print(f"[BOOKING] ✅ Reactivated MentorAssignment: mentor={booking.mentor_id}, learner={booking.learner_id}")
+                            else:
+                                print(f"[BOOKING] ℹ️ MentorAssignment already exists and active: mentor={booking.mentor_id}, learner={booking.learner_id}")
+                        except Exception as assignment_error:
+                            print(f"[BOOKING] ❌ ERROR creating assignment: {assignment_error}")
+                            import traceback
+                            traceback.print_exc()
+                            # Don't fail the entire booking update, just log the error
                         
-                        # Check if assignment already exists for this mentor-learner pair
-                        existing_assignment = session.query(MentorAssignmentModel).filter(
-                            MentorAssignmentModel.mentor_id == booking.mentor_id,
-                            MentorAssignmentModel.learner_id == booking.learner_id
-                        ).first()
-                        
-                        if not existing_assignment:
-                            # Create new assignment
-                            new_assignment = MentorAssignmentModel(
-                                mentor_id=booking.mentor_id,
-                                learner_id=booking.learner_id,
-                                assigned_by=booking.mentor_id,  # Mentor assigns via booking confirmation
-                                status='active',
-                                notes=f"Assigned via booking #{booking_id}",
-                                assigned_at=datetime.now()
-                            )
-                            session.add(new_assignment)
-                            print(f"[BOOKING] Created MentorAssignment: mentor={booking.mentor_id}, learner={booking.learner_id}")
-                        elif existing_assignment.status != 'active':
-                            # Reactivate existing assignment
-                            existing_assignment.status = 'active'
-                            existing_assignment.updated_at = datetime.now()
-                            print(f"[BOOKING] Reactivated MentorAssignment: mentor={booking.mentor_id}, learner={booking.learner_id}")
                         
                         NotificationService.create_notification(
                             user_id=booking.learner_id,

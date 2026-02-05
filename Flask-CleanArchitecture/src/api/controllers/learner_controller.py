@@ -494,6 +494,8 @@ def update_booking(booking_id):
         new_status = data.get('status')
         mentor_name = booking.get('mentor_name', 'Mentor')
         
+        # Note: MentorAssignment is auto-created in learner_service.update_booking when status='confirmed'
+        
         if learner_id and str(learner_id) in connected_users:
             status_messages = {
                 'confirmed': f'✅ Mentor {mentor_name} đã xác nhận lịch hẹn của bạn!',

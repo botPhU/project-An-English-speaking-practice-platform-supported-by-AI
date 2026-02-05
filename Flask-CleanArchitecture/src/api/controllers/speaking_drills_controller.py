@@ -76,7 +76,7 @@ def conversation_respond():
     
     # Try to use AI service for response
     try:
-        from src.services.ai_service import AIService
+        from services.ai_service import AIService
         ai_service = AIService()
         
         # Build conversation context

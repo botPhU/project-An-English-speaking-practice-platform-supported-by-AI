@@ -2,36 +2,38 @@
 Speaking Session Model
 Stores learner's AI speaking practice sessions for mentor review
 """
-
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from infrastructure.databases.mssql import Base
 from datetime import datetime
-from src.infrastructure.database import db
 
 
-class SpeakingSession(db.Model):
+class SpeakingSession(Base):
     """Speaking practice session between learner and AI"""
     __tablename__ = 'speaking_sessions'
+    __table_args__ = {'extend_existing': True}
     
-    id = db.Column(db.Integer, primary_key=True)
-    learner_id = db.Column(db.Integer, db.ForeignKey('flask_user.id'), nullable=False)
-    mentor_id = db.Column(db.Integer, db.ForeignKey('flask_user.id'), nullable=True)
-    topic = db.Column(db.String(200), nullable=False)
-    mode = db.Column(db.String(50), default='conversation')  # 'repeat' or 'conversation'
-    started_at = db.Column(db.DateTime, default=datetime.utcnow)
-    ended_at = db.Column(db.DateTime, nullable=True)
-    average_score = db.Column(db.Float, default=0)
-    total_turns = db.Column(db.Integer, default=0)
-    is_active = db.Column(db.Boolean, default=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    learner_id = Column(Integer, ForeignKey('flask_user.id'), nullable=False)
+    mentor_id = Column(Integer, ForeignKey('flask_user.id'), nullable=True)
+    topic = Column(String(200), nullable=False)
+    mode = Column(String(50), default='conversation')  # 'repeat' or 'conversation'
+    started_at = Column(DateTime, default=datetime.utcnow)
+    ended_at = Column(DateTime, nullable=True)
+    average_score = Column(Float, default=0)
+    total_turns = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
     
     # Relationships
-    learner = db.relationship('FlaskUser', foreign_keys=[learner_id], backref='speaking_sessions')
-    messages = db.relationship('SpeakingMessage', backref='session', lazy='dynamic', cascade='all, delete-orphan')
+    learner = relationship('UserModel', foreign_keys=[learner_id], backref='speaking_sessions')
+    messages = relationship('SpeakingMessage', backref='session', lazy='dynamic', cascade='all, delete-orphan')
     
     def to_dict(self):
         return {
             'id': self.id,
             'learner_id': self.learner_id,
-            'learner_name': self.learner.name if self.learner else 'Unknown',
-            'learner_avatar': f"https://api.dicebear.com/7.x/avataaars/svg?seed={self.learner.name if self.learner else 'User'}",
+            'learner_name': self.learner.full_name if self.learner else 'Unknown',
+            'learner_avatar': f"https://api.dicebear.com/7.x/avataaars/svg?seed={self.learner.full_name if self.learner else 'User'}",
             'mentor_id': self.mentor_id,
             'topic': self.topic,
             'mode': self.mode,
@@ -44,18 +46,19 @@ class SpeakingSession(db.Model):
         }
 
 
-class SpeakingMessage(db.Model):
+class SpeakingMessage(Base):
     """Individual message in a speaking session"""
     __tablename__ = 'speaking_messages'
+    __table_args__ = {'extend_existing': True}
     
-    id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.Integer, db.ForeignKey('speaking_sessions.id'), nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # 'ai' or 'user'
-    text = db.Column(db.Text, nullable=False)
-    score = db.Column(db.Float, nullable=True)
-    feedback = db.Column(db.Text, nullable=True)
-    audio_url = db.Column(db.String(500), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, ForeignKey('speaking_sessions.id'), nullable=False)
+    role = Column(String(20), nullable=False)  # 'ai' or 'user'
+    text = Column(Text, nullable=False)
+    score = Column(Float, nullable=True)
+    feedback = Column(Text, nullable=True)
+    audio_url = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
     
     def to_dict(self):
         return {

@@ -52,8 +52,10 @@ export default function BookingRequestsModal({
 
     const fetchBookings = async () => {
         setLoading(true);
+        console.log('[BookingRequestsModal] Fetching bookings for mentorId:', mentorId);
         try {
             const response = await mentorService.getBookings(mentorId);
+            console.log('[BookingRequestsModal] API Response:', response);
             let bookingsData: Booking[] = [];
 
             if (Array.isArray(response.data)) {
@@ -61,6 +63,8 @@ export default function BookingRequestsModal({
             } else if (response.data?.bookings) {
                 bookingsData = response.data.bookings;
             }
+
+            console.log('[BookingRequestsModal] Processed bookings:', bookingsData.length);
 
             // Sort by created_at descending, put focused booking first if specified
             bookingsData.sort((a, b) => {
@@ -73,7 +77,7 @@ export default function BookingRequestsModal({
 
             setBookings(bookingsData);
         } catch (error) {
-            console.error('Error fetching bookings:', error);
+            console.error('[BookingRequestsModal] Error fetching bookings:', error);
             setBookings([]);
         } finally {
             setLoading(false);

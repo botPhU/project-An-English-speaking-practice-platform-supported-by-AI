@@ -136,6 +136,24 @@ class SocketService {
         return this.socket;
     }
 
+    // Generic event listener - for custom events
+    on(event: string, callback: (data: any) => void): void {
+        if (this.socket) {
+            this.socket.on(event, callback);
+        }
+    }
+
+    // Remove event listener
+    off(event: string, callback?: (data: any) => void): void {
+        if (this.socket) {
+            if (callback) {
+                this.socket.off(event, callback);
+            } else {
+                this.socket.off(event);
+            }
+        }
+    }
+
     disconnect(): void {
         if (this.userId) {
             this.socket?.emit('user_offline', { userId: this.userId });

@@ -3,12 +3,14 @@ import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { learnerService } from '../../services/learnerService';
+import { socketService } from '../../services/socketService';
 import api from '../../services/api';
 import BookingRequestsModal from '../mentor/BookingRequestsModal';
+import VideoCallModal from '../VideoCallModal';
 
 interface Notification {
     id: string;
-    type: 'success' | 'warning' | 'info' | 'error' | 'booking' | 'session' | 'assignment';
+    type: 'success' | 'warning' | 'info' | 'error' | 'booking' | 'session' | 'assignment' | 'video_call';
     title: string;
     message: string;
     time: string;
@@ -16,6 +18,14 @@ interface Notification {
     avatar?: string;
     action_url?: string;
     notification_type?: string;
+}
+
+interface VideoCallInvite {
+    room_name: string;
+    join_url: string;
+    mentor_id: number;
+    mentor_name: string;
+    booking_id: number;
 }
 
 const NotificationDropdown: React.FC = () => {
@@ -28,6 +38,12 @@ const NotificationDropdown: React.FC = () => {
 
     // Booking modal state
     const [showBookingModal, setShowBookingModal] = useState(false);
+
+    // Video call invite state
+    const [showVideoInvite, setShowVideoInvite] = useState(false);
+    const [videoInvite, setVideoInvite] = useState<VideoCallInvite | null>(null);
+    const [showVideoCall, setShowVideoCall] = useState(false);
+    const [currentRoomName, setCurrentRoomName] = useState('');
 
     const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -83,6 +99,41 @@ const NotificationDropdown: React.FC = () => {
         return () => clearInterval(interval);
     }, [authUser?.id]);
 
+    // Listen for real-time video call invites via WebSocket
+    useEffect(() => {
+        if (!authUser?.id) return;
+
+        // Connect to socket if not connected
+        socketService.connect();
+        socketService.emitUserOnline(authUser.id.toString());
+
+        // Listen for video call invite
+        const handleVideoInvite = (data: any) => {
+            console.log('[Notification] Video call invite received:', data);
+            setVideoInvite({
+                room_name: data.room_name,
+                join_url: data.join_url,
+                mentor_id: data.mentor_id,
+                mentor_name: data.mentor_name,
+                booking_id: data.booking_id
+            });
+            setShowVideoInvite(true);
+
+            // Play notification sound
+            try {
+                const audio = new Audio('/notification.mp3');
+                audio.volume = 0.5;
+                audio.play().catch(() => { });
+            } catch (e) { }
+        };
+
+        socketService.on('video_call_invite', handleVideoInvite);
+
+        return () => {
+            socketService.off('video_call_invite', handleVideoInvite);
+        };
+    }, [authUser?.id]);
+
     // Helper to format relative time
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -130,11 +181,34 @@ const NotificationDropdown: React.FC = () => {
             // For booking notifications, show the booking modal
             setIsOpen(false);
             setShowBookingModal(true);
+        } else if (notifType === 'video_call' && notification.action_url) {
+            // For video call notifications, extract room name and open video call
+            setIsOpen(false);
+            const roomMatch = notification.action_url.match(/room=([^&]+)/);
+            if (roomMatch) {
+                setCurrentRoomName(roomMatch[1]);
+                setShowVideoCall(true);
+            } else {
+                navigate(notification.action_url);
+            }
         } else if (notification.action_url) {
             // For other types with action_url, navigate
             setIsOpen(false);
             navigate(notification.action_url);
         }
+    };
+
+    const handleJoinVideoCall = () => {
+        if (videoInvite) {
+            setCurrentRoomName(videoInvite.room_name);
+            setShowVideoInvite(false);
+            setShowVideoCall(true);
+        }
+    };
+
+    const handleDeclineCall = () => {
+        setShowVideoInvite(false);
+        setVideoInvite(null);
     };
 
     const markAllAsRead = async () => {
@@ -165,6 +239,8 @@ const NotificationDropdown: React.FC = () => {
                 return { bg: 'bg-cyan-500/20', text: 'text-cyan-400', icon: 'mic' };
             case 'assignment':
                 return { bg: 'bg-orange-500/20', text: 'text-orange-400', icon: 'person_add' };
+            case 'video_call':
+                return { bg: 'bg-green-500/20', text: 'text-green-400', icon: 'videocam' };
             case 'info':
             default:
                 return { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: 'info' };
@@ -278,6 +354,60 @@ const NotificationDropdown: React.FC = () => {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* Video Call Invite Popup */}
+            {showVideoInvite && videoInvite && ReactDOM.createPortal(
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
+                    <div className="bg-[#1a222a] rounded-2xl p-6 max-w-sm w-full mx-4 border border-[#3b4754] animate-in zoom-in duration-300">
+                        <div className="text-center">
+                            {/* Calling Animation */}
+                            <div className="relative w-24 h-24 mx-auto mb-4">
+                                <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping"></div>
+                                <div className="absolute inset-2 bg-green-500/30 rounded-full animate-pulse"></div>
+                                <div className="absolute inset-4 bg-green-500 rounded-full flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-white text-4xl">videocam</span>
+                                </div>
+                            </div>
+
+                            <h3 className="text-xl font-bold text-white mb-2">
+                                📹 {videoInvite.mentor_name} đang gọi bạn!
+                            </h3>
+                            <p className="text-[#9dabb9] mb-6">
+                                Mentor muốn bắt đầu phiên học ngay bây giờ
+                            </p>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleDeclineCall}
+                                    className="flex-1 py-3 rounded-xl bg-red-600/20 text-red-400 font-bold hover:bg-red-600/30 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined">call_end</span>
+                                    Từ chối
+                                </button>
+                                <button
+                                    onClick={handleJoinVideoCall}
+                                    className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined">videocam</span>
+                                    Tham gia
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Video Call Modal */}
+            {showVideoCall && ReactDOM.createPortal(
+                <VideoCallModal
+                    isOpen={showVideoCall}
+                    roomName={currentRoomName}
+                    userName={authUser?.name || 'User'}
+                    onClose={() => setShowVideoCall(false)}
+                />,
+                document.body
             )}
 
             {/* Booking Requests Modal - rendered via portal to escape relative container */}

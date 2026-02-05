@@ -158,3 +158,153 @@ class ResourceService:
         resources = search_query.limit(limit).all()
         
         return [r.to_dict() for r in resources]
+    
+    # ==================== LEARNER RESOURCE ASSIGNMENTS ====================
+    
+    @staticmethod
+    def assign_to_learner(
+        resource_id: int,
+        learner_id: int,
+        mentor_id: int,
+        due_date: str = None
+    ) -> Dict[str, Any]:
+        """Assign a resource to a learner"""
+        from infrastructure.models.learner_resource_model import LearnerResourceModel
+        
+        # Check if resource exists
+        resource = session.query(ResourceModel).filter_by(id=resource_id).first()
+        if not resource:
+            return {'error': 'Resource not found'}
+        
+        # Check if already assigned
+        existing = session.query(LearnerResourceModel).filter(
+            LearnerResourceModel.resource_id == resource_id,
+            LearnerResourceModel.learner_id == learner_id
+        ).first()
+        
+        if existing:
+            return {'error': 'Resource already assigned to this learner'}
+        
+        # Parse due date if provided
+        parsed_due_date = None
+        if due_date:
+            try:
+                parsed_due_date = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
+            except:
+                parsed_due_date = None
+        
+        # Create assignment
+        assignment = LearnerResourceModel(
+            resource_id=resource_id,
+            learner_id=learner_id,
+            mentor_id=mentor_id,
+            status='assigned',
+            due_date=parsed_due_date,
+            assigned_at=datetime.now()
+        )
+        
+        session.add(assignment)
+        session.commit()
+        
+        return assignment.to_dict()
+    
+    @staticmethod
+    def get_learner_assignments(
+        learner_id: int,
+        status: str = None
+    ) -> List[Dict[str, Any]]:
+        """Get all resources assigned to a learner"""
+        from infrastructure.models.learner_resource_model import LearnerResourceModel
+        
+        query = session.query(LearnerResourceModel).filter(
+            LearnerResourceModel.learner_id == learner_id
+        )
+        
+        if status:
+            query = query.filter(LearnerResourceModel.status == status)
+        
+        assignments = query.order_by(
+            LearnerResourceModel.assigned_at.desc()
+        ).all()
+        
+        return [a.to_dict() for a in assignments]
+    
+    @staticmethod
+    def get_mentor_assignments(
+        mentor_id: int,
+        learner_id: int = None,
+        status: str = None
+    ) -> List[Dict[str, Any]]:
+        """Get all assignments made by a mentor"""
+        from infrastructure.models.learner_resource_model import LearnerResourceModel
+        
+        query = session.query(LearnerResourceModel).filter(
+            LearnerResourceModel.mentor_id == mentor_id
+        )
+        
+        if learner_id:
+            query = query.filter(LearnerResourceModel.learner_id == learner_id)
+        
+        if status:
+            query = query.filter(LearnerResourceModel.status == status)
+        
+        assignments = query.order_by(
+            LearnerResourceModel.assigned_at.desc()
+        ).all()
+        
+        return [a.to_dict() for a in assignments]
+    
+    @staticmethod
+    def update_assignment(
+        assignment_id: int,
+        status: str = None,
+        score: int = None,
+        mentor_feedback: str = None,
+        learner_notes: str = None
+    ) -> Optional[Dict[str, Any]]:
+        """Update an assignment status or feedback"""
+        from infrastructure.models.learner_resource_model import LearnerResourceModel
+        
+        assignment = session.query(LearnerResourceModel).filter_by(
+            id=assignment_id
+        ).first()
+        
+        if not assignment:
+            return None
+        
+        if status:
+            assignment.status = status
+            if status == 'completed':
+                assignment.completion_date = datetime.now()
+        
+        if score is not None:
+            assignment.score = score
+        
+        if mentor_feedback is not None:
+            assignment.mentor_feedback = mentor_feedback
+        
+        if learner_notes is not None:
+            assignment.learner_notes = learner_notes
+        
+        assignment.updated_at = datetime.now()
+        session.commit()
+        
+        return assignment.to_dict()
+    
+    @staticmethod
+    def delete_assignment(assignment_id: int, mentor_id: int) -> bool:
+        """Delete an assignment (only by assigning mentor)"""
+        from infrastructure.models.learner_resource_model import LearnerResourceModel
+        
+        assignment = session.query(LearnerResourceModel).filter(
+            LearnerResourceModel.id == assignment_id,
+            LearnerResourceModel.mentor_id == mentor_id
+        ).first()
+        
+        if assignment:
+            session.delete(assignment)
+            session.commit()
+            return True
+        
+        return False
+
