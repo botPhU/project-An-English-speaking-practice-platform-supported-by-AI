@@ -11,6 +11,7 @@ from infrastructure.databases.mssql import Base
 class MentorApplicationModel(Base):
     """Model for mentor applications"""
     __tablename__ = 'mentor_applications'
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('flask_user.id'), nullable=True)  # Null if applying during registration
@@ -68,46 +69,79 @@ class MentorApplicationModel(Base):
     
     def to_dict(self):
         import json
+        
+        # Safe attribute getter with default
+        def safe_get(attr, default=None):
+            return getattr(self, attr, default) or default
+        
+        # Parse JSON safely
+        def parse_json(value, default=None):
+            if default is None:
+                default = []
+            if not value:
+                return default
+            try:
+                return json.loads(value)
+            except:
+                return default
+        
+        # Get user info from flask_user if linked
+        user_name = safe_get('full_name', '')
+        user_email = safe_get('email', '')
+        
+        # Try to get from linked user if fields are empty
+        if self.user_id and (not user_name or not user_email):
+            try:
+                from infrastructure.databases.mssql import SessionLocal
+                with SessionLocal() as session:
+                    from infrastructure.models.user_model import UserModel
+                    user = session.query(UserModel).get(self.user_id)
+                    if user:
+                        user_name = user_name or user.full_name or user.user_name
+                        user_email = user_email or user.email
+            except:
+                pass
+        
         return {
             'id': self.id,
             'user_id': self.user_id,
             'personal_info': {
-                'full_name': self.full_name,
-                'email': self.email,
-                'phone': self.phone,
-                'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None
+                'full_name': user_name or f'Mentor #{self.id}',
+                'email': user_email or '',
+                'phone': safe_get('phone', ''),
+                'date_of_birth': self.date_of_birth.isoformat() if safe_get('date_of_birth') else None
             },
             'professional_info': {
-                'current_job': self.current_job,
-                'company': self.company,
-                'years_experience': self.years_experience
+                'current_job': safe_get('current_job', safe_get('specialty', '')),
+                'company': safe_get('company', ''),
+                'years_experience': safe_get('years_experience', safe_get('experience_years', 0)) or 0
             },
             'education': {
-                'level': self.education_level,
-                'major': self.major,
-                'university': self.university
+                'level': safe_get('education_level', ''),
+                'major': safe_get('major', ''),
+                'university': safe_get('university', '')
             },
             'english_qualifications': {
-                'certificates': json.loads(self.english_certificates) if self.english_certificates else [],
-                'native_language': self.native_language,
-                'english_level': self.english_level
+                'certificates': parse_json(safe_get('english_certificates') or safe_get('certifications')),
+                'native_language': safe_get('native_language', 'Vietnamese'),
+                'english_level': safe_get('english_level', '')
             },
             'teaching': {
-                'experience': self.teaching_experience,
-                'specializations': json.loads(self.specializations) if self.specializations else [],
-                'target_students': json.loads(self.target_students) if self.target_students else [],
-                'available_hours': self.available_hours_per_week,
-                'motivation': self.motivation,
-                'teaching_style': self.teaching_style
+                'experience': safe_get('teaching_experience', safe_get('bio', '')),
+                'specializations': parse_json(safe_get('specializations') or safe_get('specialty')),
+                'target_students': parse_json(safe_get('target_students')),
+                'available_hours': safe_get('available_hours_per_week', 0) or 0,
+                'motivation': safe_get('motivation', ''),
+                'teaching_style': safe_get('teaching_style', '')
             },
             'documents': {
-                'cv': self.cv_file_path,
-                'certificates': json.loads(self.certificate_files) if self.certificate_files else [],
-                'video_intro': self.video_intro_url
+                'cv': safe_get('cv_file_path', safe_get('cv_url', '')),
+                'certificates': parse_json(safe_get('certificate_files')),
+                'video_intro': safe_get('video_intro_url', '')
             },
-            'status': self.status,
-            'admin_notes': self.admin_notes,
-            'rejection_reason': self.rejection_reason,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None
+            'status': self.status or 'pending',
+            'admin_notes': safe_get('admin_notes', ''),
+            'rejection_reason': safe_get('rejection_reason', safe_get('reject_reason', '')),
+            'created_at': self.created_at.isoformat() if safe_get('created_at') else None,
+            'reviewed_at': self.reviewed_at.isoformat() if safe_get('reviewed_at') else None
         }

@@ -75,22 +75,5 @@ class SystemSettingModel(Base):
     updater = relationship('UserModel')
 
 
-class MentorApplicationModel(Base):
-    """Model for mentor applications"""
-    __tablename__ = 'mentor_applications'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('flask_user.id'), nullable=False)
-    specialty = Column(String(255))
-    experience_years = Column(Integer)
-    bio = Column(Text)
-    certifications = Column(Text)  # JSON array
-    cv_url = Column(String(500))
-    status = Column(String(50), default='pending')  # pending, approved, rejected
-    reviewed_by = Column(Integer, ForeignKey('flask_user.id'))
-    reviewed_at = Column(DateTime)
-    reject_reason = Column(Text)
-    created_at = Column(DateTime, default=datetime.now)
-    
-    user = relationship('UserModel', foreign_keys=[user_id])
-    reviewer = relationship('UserModel', foreign_keys=[reviewed_by])
+# Note: MentorApplicationModel is now defined in mentor_application_model.py
+# Import it from there: from infrastructure.models.mentor_application_model import MentorApplicationModel

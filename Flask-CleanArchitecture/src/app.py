@@ -43,6 +43,8 @@ from api.controllers.video_controller import video_bp
 from api.controllers.study_buddy_controller import study_buddy_bp
 from api.controllers.note_controller import bp as note_bp
 from api.controllers.speaking_drills_controller import speaking_drills_bp
+from api.controllers.feedback_moderation_controller import feedback_moderation_bp
+from api.controllers.mentor_application_controller import mentor_application_bp
 
 
 def create_app():
@@ -85,6 +87,8 @@ def create_app():
     app.register_blueprint(study_buddy_bp)
     app.register_blueprint(note_bp)
     app.register_blueprint(speaking_drills_bp, url_prefix='/api/speaking-drills')
+    app.register_blueprint(feedback_moderation_bp)
+    app.register_blueprint(mentor_application_bp)
 
     # Swagger UI blueprint
     SWAGGER_URL = '/docs'

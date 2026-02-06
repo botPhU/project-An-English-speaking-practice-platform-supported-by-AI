@@ -33,6 +33,20 @@ const PackageManagement: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
+    // Edit modal state
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [isCreateMode, setIsCreateMode] = useState(false);
+    const [editingPackage, setEditingPackage] = useState<Package | null>(null);
+    const [editFormData, setEditFormData] = useState({
+        name: '',
+        price: '',
+        description: '',
+        features: [] as string[],
+        status: 'active' as 'active' | 'inactive'
+    });
+    const [saving, setSaving] = useState(false);
+    const [newFeature, setNewFeature] = useState('');
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -87,6 +101,92 @@ const PackageManagement: React.FC = () => {
         }
     };
 
+    // Open edit modal
+    const openEditModal = (pkg: Package) => {
+        setIsCreateMode(false);
+        setEditingPackage(pkg);
+        setEditFormData({
+            name: pkg.name,
+            price: pkg.price.replace(/[^\d]/g, ''), // Remove non-digits
+            description: '',
+            features: [...pkg.features],
+            status: pkg.status
+        });
+        setShowEditModal(true);
+    };
+
+    // Save package (create or update)
+    const handleSavePackage = async () => {
+        try {
+            setSaving(true);
+
+            const packageData = {
+                name: editFormData.name,
+                price: parseInt(editFormData.price) || 0,
+                description: editFormData.description,
+                features: editFormData.features,
+                status: editFormData.status
+            };
+
+            if (isCreateMode) {
+                // Create new package
+                const response = await adminService.createPackage(packageData);
+                const newPkg = response.data;
+                setPackages(prev => [...prev, {
+                    id: newPkg.id || Date.now(),
+                    name: editFormData.name,
+                    tier: 'custom',
+                    price: `${parseInt(editFormData.price).toLocaleString()} đồng`,
+                    cycle: 'tháng',
+                    features: editFormData.features,
+                    users: 0,
+                    status: editFormData.status,
+                    icon: 'package_2',
+                    iconColor: 'text-primary',
+                    iconBg: 'bg-primary/20'
+                }]);
+                alert('Tạo gói mới thành công!');
+            } else if (editingPackage) {
+                // Update existing package
+                await adminService.updatePackage(editingPackage.id, packageData);
+                setPackages(prev => prev.map(p =>
+                    p.id === editingPackage.id
+                        ? { ...p, name: editFormData.name, price: `${parseInt(editFormData.price).toLocaleString()} đồng`, features: editFormData.features, status: editFormData.status }
+                        : p
+                ));
+                alert('Cập nhật gói thành công!');
+            }
+
+            setShowEditModal(false);
+            setEditingPackage(null);
+            setIsCreateMode(false);
+        } catch (err) {
+            console.error('Error saving package:', err);
+            alert(isCreateMode ? 'Lỗi khi tạo gói mới' : 'Lỗi khi cập nhật gói');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Add feature
+    const addFeature = () => {
+        if (newFeature.trim()) {
+            setEditFormData(prev => ({
+                ...prev,
+                features: [...prev.features, newFeature.trim()]
+            }));
+            setNewFeature('');
+        }
+    };
+
+    // Remove feature
+    const removeFeature = (index: number) => {
+        setEditFormData(prev => ({
+            ...prev,
+            features: prev.features.filter((_, i) => i !== index)
+        }));
+    };
+
     const filteredPackages = packages.filter(pkg => {
         const matchesSearch = pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             pkg.tier.toLowerCase().includes(searchQuery.toLowerCase());
@@ -100,7 +200,21 @@ const PackageManagement: React.FC = () => {
             subtitle="Quản lý các gói subscription và pricing"
             icon="inventory_2"
             actions={
-                <button className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/25 flex items-center gap-2">
+                <button
+                    onClick={() => {
+                        setIsCreateMode(true);
+                        setEditingPackage(null);
+                        setEditFormData({
+                            name: '',
+                            price: '',
+                            description: '',
+                            features: [],
+                            status: 'active'
+                        });
+                        setShowEditModal(true);
+                    }}
+                    className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/25 flex items-center gap-2"
+                >
                     <span className="material-symbols-outlined text-[18px]">add</span>
                     Tạo gói mới
                 </button>
@@ -211,7 +325,10 @@ const PackageManagement: React.FC = () => {
                                 </div>
                                 <div className="flex items-center justify-between pt-4 border-t border-[#3b4754]">
                                     <span className="text-sm text-[#9dabb9]">{pkg.users.toLocaleString()} users</span>
-                                    <button className="text-primary text-sm font-medium hover:text-white transition-colors opacity-0 group-hover:opacity-100">
+                                    <button
+                                        onClick={() => openEditModal(pkg)}
+                                        className="text-primary text-sm font-medium hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                                    >
                                         Chỉnh sửa →
                                     </button>
                                 </div>
@@ -219,6 +336,117 @@ const PackageManagement: React.FC = () => {
                         ))
                     )}
                 </div>
+
+                {/* Edit/Create Modal */}
+                {showEditModal && (isCreateMode || editingPackage) && (
+                    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+                        <div className="bg-[#283039] rounded-xl p-6 w-full max-w-lg mx-4 border border-[#3b4754]">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-white">
+                                    {isCreateMode ? '🆕 Tạo gói mới' : `✏️ Chỉnh sửa: ${editingPackage?.name}`}
+                                </h2>
+                                <button
+                                    onClick={() => setShowEditModal(false)}
+                                    className="text-[#9dabb9] hover:text-white"
+                                >
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Name */}
+                                <div>
+                                    <label className="block text-sm text-[#9dabb9] mb-1">Tên gói</label>
+                                    <input
+                                        type="text"
+                                        value={editFormData.name}
+                                        onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                                        className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    />
+                                </div>
+
+                                {/* Price */}
+                                <div>
+                                    <label className="block text-sm text-[#9dabb9] mb-1">Giá (VNĐ)</label>
+                                    <input
+                                        type="number"
+                                        value={editFormData.price}
+                                        onChange={(e) => setEditFormData(prev => ({ ...prev, price: e.target.value }))}
+                                        className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    />
+                                </div>
+
+                                {/* Status */}
+                                <div>
+                                    <label className="block text-sm text-[#9dabb9] mb-1">Trạng thái</label>
+                                    <select
+                                        value={editFormData.status}
+                                        onChange={(e) => setEditFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                                        className="w-full bg-[#1a222a] border border-[#3b4754] text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    >
+                                        <option value="active">Hoạt động</option>
+                                        <option value="inactive">Không hoạt động</option>
+                                    </select>
+                                </div>
+
+                                {/* Features */}
+                                <div>
+                                    <label className="block text-sm text-[#9dabb9] mb-1">Tính năng</label>
+                                    <div className="space-y-2 mb-2">
+                                        {editFormData.features.map((feature, idx) => (
+                                            <div key={idx} className="flex items-center gap-2">
+                                                <span className="flex-1 text-white text-sm bg-[#1a222a] px-3 py-1.5 rounded border border-[#3b4754]">{feature}</span>
+                                                <button
+                                                    onClick={() => removeFeature(idx)}
+                                                    className="text-red-400 hover:text-red-300"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={newFeature}
+                                            onChange={(e) => setNewFeature(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && addFeature()}
+                                            placeholder="Thêm tính năng mới..."
+                                            className="flex-1 bg-[#1a222a] border border-[#3b4754] text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                        />
+                                        <button
+                                            onClick={addFeature}
+                                            className="bg-primary/20 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/30"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">add</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => setShowEditModal(false)}
+                                    className="flex-1 py-2.5 border border-[#3b4754] text-[#9dabb9] rounded-lg hover:bg-[#3e4854] transition-colors"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleSavePackage}
+                                    disabled={saving}
+                                    className="flex-1 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {saving ? (
+                                        <><span className="material-symbols-outlined animate-spin text-[18px]">sync</span> Đang lưu...</>
+                                    ) : (
+                                        <><span className="material-symbols-outlined text-[18px]">save</span> Lưu thay đổi</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </AdminLayout>
     );

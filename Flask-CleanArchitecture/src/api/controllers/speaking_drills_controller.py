@@ -487,36 +487,69 @@ def end_session(session_id):
 
 @speaking_drills_bp.route('/sessions', methods=['GET'])
 def get_sessions():
-    """Get speaking sessions for mentor (all learners) or learner (own sessions)"""
+    """Get speaking sessions for mentor (assigned learners) or learner (own sessions)"""
     user_id = request.args.get('user_id')
-    role = request.args.get('role', 'learner')  # 'mentor' to get all, 'learner' for own
+    role = request.args.get('role', 'learner')  # 'mentor' to get assigned learners, 'learner' for own
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     
     try:
-        from src.infrastructure.models.speaking_session_model import SpeakingSession
+        from infrastructure.models.speaking_session_model import SpeakingSession
+        from infrastructure.databases.mssql import get_db_session
         
-        query = SpeakingSession.query.filter_by(is_active=False)
-        
-        if role == 'learner' and user_id:
-            query = query.filter_by(learner_id=user_id)
-        
-        # Order by most recent
-        query = query.order_by(SpeakingSession.started_at.desc())
-        
-        # Paginate
-        sessions_page = query.paginate(page=page, per_page=per_page, error_out=False)
-        
-        return jsonify({
-            'success': True,
-            'sessions': [s.to_dict() for s in sessions_page.items],
-            'total': sessions_page.total,
-            'pages': sessions_page.pages,
-            'current_page': page
-        }), 200
+        with get_db_session() as db_session:
+            query = db_session.query(SpeakingSession).filter(SpeakingSession.is_active == False)
+            
+            if role == 'learner' and user_id:
+                # Learner sees only their own sessions
+                query = query.filter(SpeakingSession.learner_id == user_id)
+            elif role == 'mentor' and user_id:
+                # Mentor sees sessions from their assigned learners
+                from infrastructure.models.mentor_assignment_model import MentorAssignmentModel
+                
+                # Get all learners assigned to this mentor
+                assigned_learners = db_session.query(MentorAssignmentModel.learner_id).filter(
+                    MentorAssignmentModel.mentor_id == user_id,
+                    MentorAssignmentModel.status == 'active'
+                ).all()
+                
+                learner_ids = [a.learner_id for a in assigned_learners]
+                
+                if learner_ids:
+                    query = query.filter(SpeakingSession.learner_id.in_(learner_ids))
+                else:
+                    # No assigned learners, return empty
+                    return jsonify({
+                        'success': True,
+                        'sessions': [],
+                        'total': 0,
+                        'pages': 0,
+                        'current_page': page,
+                        'message': 'No learners assigned to this mentor'
+                    }), 200
+            
+            # Order by most recent
+            query = query.order_by(SpeakingSession.started_at.desc())
+            
+            # Get total count
+            total = query.count()
+            
+            # Paginate manually
+            offset = (page - 1) * per_page
+            sessions = query.offset(offset).limit(per_page).all()
+            
+            return jsonify({
+                'success': True,
+                'sessions': [s.to_dict() for s in sessions],
+                'total': total,
+                'pages': (total + per_page - 1) // per_page if total > 0 else 0,
+                'current_page': page
+            }), 200
         
     except Exception as e:
         print(f"Error getting sessions: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e), 'sessions': []}), 200
 
 
@@ -524,17 +557,92 @@ def get_sessions():
 def get_session(session_id):
     """Get a single session with all messages"""
     try:
-        from src.infrastructure.models.speaking_session_model import SpeakingSession
+        from infrastructure.models.speaking_session_model import SpeakingSession
+        from infrastructure.databases.mssql import get_db_session
         
-        session = SpeakingSession.query.get(session_id)
-        if not session:
-            return jsonify({'success': False, 'error': 'Session not found'}), 404
-        
-        return jsonify({
-            'success': True,
-            'session': session.to_dict()
-        }), 200
+        with get_db_session() as db_session:
+            session = db_session.query(SpeakingSession).get(session_id)
+            if not session:
+                return jsonify({'success': False, 'error': 'Session not found'}), 404
+            
+            return jsonify({
+                'success': True,
+                'session': session.to_dict()
+            }), 200
         
     except Exception as e:
         print(f"Error getting session: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@speaking_drills_bp.route('/mentor/learners', methods=['GET'])
+def get_mentor_learners():
+    """Get list of learners assigned to a mentor with their speaking session statistics"""
+    mentor_id = request.args.get('mentor_id')
+    
+    if not mentor_id:
+        return jsonify({'success': False, 'error': 'Missing mentor_id'}), 400
+    
+    try:
+        from infrastructure.models.mentor_assignment_model import MentorAssignmentModel
+        from infrastructure.models.speaking_session_model import SpeakingSession
+        from infrastructure.models.user_model import UserModel
+        from infrastructure.databases.mssql import get_db_session
+        from sqlalchemy import func
+        
+        with get_db_session() as db_session:
+            # Get all active assignments for this mentor
+            assignments = db_session.query(MentorAssignmentModel).filter(
+                MentorAssignmentModel.mentor_id == mentor_id,
+                MentorAssignmentModel.status == 'active'
+            ).all()
+            
+            learners_with_stats = []
+            
+            for assignment in assignments:
+                learner = assignment.learner
+                if not learner:
+                    continue
+                
+                # Get session stats for this learner
+                sessions = db_session.query(SpeakingSession).filter(
+                    SpeakingSession.learner_id == learner.id,
+                    SpeakingSession.is_active == False
+                ).all()
+                
+                total_sessions = len(sessions)
+                avg_score = sum(s.average_score or 0 for s in sessions) / total_sessions if total_sessions > 0 else 0
+                total_turns = sum(s.total_turns or 0 for s in sessions)
+                
+                # Get most recent session
+                recent_session = None
+                if sessions:
+                    sorted_sessions = sorted(sessions, key=lambda x: x.started_at or '', reverse=True)
+                    if sorted_sessions:
+                        recent_session = sorted_sessions[0].to_dict()
+                
+                learners_with_stats.append({
+                    'id': learner.id,
+                    'full_name': learner.full_name,
+                    'email': learner.email,
+                    'avatar_url': learner.avatar_url or f"https://api.dicebear.com/7.x/avataaars/svg?seed={learner.full_name}",
+                    'assigned_at': assignment.assigned_at.isoformat() if assignment.assigned_at else None,
+                    'stats': {
+                        'total_sessions': total_sessions,
+                        'average_score': round(avg_score, 1),
+                        'total_turns': total_turns
+                    },
+                    'recent_session': recent_session
+                })
+            
+            return jsonify({
+                'success': True,
+                'learners': learners_with_stats,
+                'total': len(learners_with_stats)
+            }), 200
+        
+    except Exception as e:
+        print(f"Error getting mentor learners: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e), 'learners': []}), 500

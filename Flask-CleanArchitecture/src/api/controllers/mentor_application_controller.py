@@ -211,7 +211,7 @@ def admin_review_application(application_id):
 
 @mentor_application_bp.route('/admin/<int:application_id>/approve', methods=['POST'])
 def admin_approve_application(application_id):
-    """Admin: Approve application and create mentor account"""
+    """Admin: Approve application and activate mentor account"""
     try:
         data = request.get_json()
         admin_id = data.get('admin_id')
@@ -232,18 +232,26 @@ def admin_approve_application(application_id):
             application.reviewed_by = admin_id
             application.reviewed_at = datetime.now()
             
-            # TODO: Create mentor account or update user role to mentor
-            # This would:
-            # 1. If user_id exists, update role to 'mentor'
-            # 2. If no user_id, send email invitation to create account
+            # Activate the mentor user account
+            mentor_activated = False
+            if application.user_id:
+                from infrastructure.models.user_model import UserModel
+                user = session.query(UserModel).filter_by(id=application.user_id).first()
+                if user:
+                    user.status = True  # Activate account
+                    user.role = 'mentor'  # Ensure role is mentor
+                    user.updated_at = datetime.now()
+                    mentor_activated = True
             
             session.commit()
             
             return jsonify({
                 'success': True,
-                'message': 'Application approved. Mentor account created.',
+                'message': 'Application approved. Mentor account activated.' if mentor_activated else 'Application approved.',
                 'application_id': application_id,
-                'mentor_email': application.email
+                'mentor_email': application.email,
+                'mentor_activated': mentor_activated,
+                'user_id': application.user_id
             }), 200
             
     except Exception as e:

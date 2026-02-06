@@ -212,6 +212,159 @@ class StudyBuddyService:
             
             return True
         return False
+    
+    @staticmethod
+    def get_online_learners(user_id: int, level: str = None, limit: int = 20) -> list:
+        """Get list of online learners for practice matching"""
+        from api.websocket import get_online_learner_ids
+        
+        session = get_db_session()
+        try:
+            online_ids = get_online_learner_ids()
+            # Filter out current user and convert to int
+            online_ids = [int(uid) for uid in online_ids if int(uid) != user_id]
+            
+            if not online_ids:
+                return []
+            
+            # Get user info for online learners
+            query = session.query(UserModel, ProgressModel).outerjoin(
+                ProgressModel, UserModel.id == ProgressModel.user_id
+            ).filter(
+                UserModel.id.in_(online_ids),
+                UserModel.role == 'learner',
+                UserModel.status == True
+            )
+            
+            # Filter by level if specified
+            if level:
+                level_map = {
+                    'beginner': ['beginner', 'elementary'],
+                    'elementary': ['beginner', 'elementary', 'intermediate'],
+                    'intermediate': ['elementary', 'intermediate', 'upper-intermediate'],
+                    'upper-intermediate': ['intermediate', 'upper-intermediate', 'advanced'],
+                    'advanced': ['upper-intermediate', 'advanced']
+                }
+                allowed_levels = level_map.get(level, [level])
+                query = query.filter(
+                    or_(
+                        ProgressModel.current_level.in_(allowed_levels),
+                        ProgressModel.current_level == None
+                    )
+                )
+            
+            results = query.limit(limit).all()
+            
+            learners = []
+            for user, progress in results:
+                learners.append({
+                    'id': user.id,
+                    'full_name': user.full_name,
+                    'avatar': user.avatar_url,
+                    'level': progress.current_level if progress else 'beginner',
+                    'xp_points': progress.xp_points if progress else 0,
+                    'status': 'online'
+                })
+            
+            return learners
+        except Exception as e:
+            print(f"[StudyBuddy] Error getting online learners: {e}")
+            return []
+        finally:
+            session.close()
+    
+    @staticmethod
+    def send_invite(from_user_id: int, to_user_id: int, topic: str = None) -> dict:
+        """Send practice invite to another user"""
+        from api.websocket import connected_users, socketio
+        
+        session = get_db_session()
+        try:
+            # Get sender info
+            from_user = session.query(UserModel).filter_by(id=from_user_id).first()
+            if not from_user:
+                return {'success': False, 'error': 'User not found'}
+            
+            # Check if target is online
+            to_user_id_str = str(to_user_id)
+            if to_user_id_str not in connected_users:
+                return {'success': False, 'error': 'User is offline'}
+            
+            # Send invite via WebSocket
+            target_sid = connected_users[to_user_id_str]['sid']
+            socketio.emit('practice_invite_received', {
+                'fromUserId': str(from_user_id),
+                'fromUserName': from_user.full_name,
+                'fromUserAvatar': from_user.avatar_url,
+                'topic': topic
+            }, room=target_sid)
+            
+            return {'success': True, 'message': 'Invite sent'}
+        except Exception as e:
+            print(f"[StudyBuddy] Error sending invite: {e}")
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    @staticmethod
+    def respond_to_invite(user_id: int, from_user_id: int, accept: bool) -> dict:
+        """Handle response to a practice invite"""
+        from api.websocket import connected_users, socketio
+        
+        session = get_db_session()
+        try:
+            from_user_id_str = str(from_user_id)
+            if from_user_id_str not in connected_users:
+                return {'success': False, 'error': 'Inviter is offline'}
+            
+            from_user_sid = connected_users[from_user_id_str]['sid']
+            
+            if accept:
+                # Create room for practice session
+                room_name = f"aesp-practice-{from_user_id}-{user_id}-{int(datetime.now().timestamp())}"
+                
+                # Get user info
+                user = session.query(UserModel).filter_by(id=user_id).first()
+                
+                # Store match
+                StudyBuddyModel._matches[user_id] = {
+                    'buddy_id': from_user_id,
+                    'room_name': room_name,
+                    'created_at': datetime.now()
+                }
+                StudyBuddyModel._matches[from_user_id] = {
+                    'buddy_id': user_id,
+                    'room_name': room_name,
+                    'created_at': datetime.now()
+                }
+                
+                # Notify inviter
+                socketio.emit('invite_accepted', {
+                    'userId': str(user_id),
+                    'userName': user.full_name if user else 'User',
+                    'userAvatar': user.avatar_url if user else None,
+                    'roomName': room_name
+                }, room=from_user_sid)
+                
+                return {
+                    'success': True,
+                    'accepted': True,
+                    'room_name': room_name,
+                    'buddy_id': from_user_id
+                }
+            else:
+                # Notify inviter that invite was declined
+                socketio.emit('invite_declined', {
+                    'userId': str(user_id),
+                    'reason': 'User declined the invitation'
+                }, room=from_user_sid)
+                
+                return {'success': True, 'accepted': False}
+        except Exception as e:
+            print(f"[StudyBuddy] Error responding to invite: {e}")
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
 
 
 # Singleton instance

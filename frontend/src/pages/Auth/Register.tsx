@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 
-// Register page - Đăng ký (Learner)
+// Register page - Đăng ký (Learner/Mentor)
 export default function Register() {
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
@@ -12,8 +12,14 @@ export default function Register() {
     const [userName, setUserName] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [role, setRole] = useState<'learner' | 'mentor'>('learner');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [pendingApproval, setPendingApproval] = useState(false);
+
+    // Extra fields for mentor
+    const [motivation, setMotivation] = useState('');
+    const [teachingExperience, setTeachingExperience] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,19 +41,41 @@ export default function Register() {
             return;
         }
 
+        // Extra validation for mentor
+        if (role === 'mentor' && !motivation) {
+            setError('Vui lòng cho biết lý do bạn muốn trở thành mentor');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const response = await authService.register({
+            const registerData: any = {
                 user_name: userName,
                 email: email,
                 password: password,
                 full_name: fullName,
-                role: 'learner'
-            });
+                role: role
+            };
 
-            // Auto-login after registration by storing tokens
+            // Add mentor-specific fields
+            if (role === 'mentor') {
+                registerData.motivation = motivation;
+                registerData.teaching_experience = teachingExperience;
+                registerData.english_level = 'advanced';
+            }
+
+            const response = await authService.register(registerData);
+
             const data = response.data as any;
+
+            // Check if this is a pending mentor registration
+            if (data.pending_approval) {
+                setPendingApproval(true);
+                return;
+            }
+
+            // Auto-login after registration by storing tokens (only for learners)
             if (data.access_token) {
                 localStorage.setItem('accessToken', data.access_token);
             }
@@ -64,6 +92,40 @@ export default function Register() {
             setLoading(false);
         }
     };
+
+    // Show pending approval message for mentors
+    if (pendingApproval) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#f6f7f8] dark:bg-[#111418] px-4">
+                <div className="max-w-md w-full bg-white dark:bg-[#1c2127] rounded-2xl p-8 shadow-xl text-center">
+                    <div className="w-16 h-16 bg-[#2b8cee]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span className="material-symbols-outlined text-[#2b8cee] text-4xl">pending</span>
+                    </div>
+                    <h1 className="text-2xl font-bold text-[#111418] dark:text-white mb-4">
+                        Đơn đăng ký đã được gửi!
+                    </h1>
+                    <p className="text-[#637588] dark:text-[#9dabb9] mb-6">
+                        Cảm ơn bạn đã đăng ký làm Mentor tại AESP. Đơn của bạn đang chờ Admin xét duyệt.
+                        Chúng tôi sẽ liên hệ qua email <strong>{email}</strong> khi có kết quả.
+                    </p>
+                    <div className="flex flex-col gap-3">
+                        <Link
+                            to="/login"
+                            className="w-full py-3 bg-[#2b8cee] text-white rounded-lg font-bold hover:bg-[#2b8cee]/90 transition"
+                        >
+                            Quay về đăng nhập
+                        </Link>
+                        <Link
+                            to="/"
+                            className="w-full py-3 border border-[#dce0e5] dark:border-[#3b4754] text-[#637588] dark:text-[#9dabb9] rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-[#252b32] transition"
+                        >
+                            Về trang chủ
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="relative flex min-h-screen w-full flex-row font-[Manrope,sans-serif]">
@@ -139,6 +201,74 @@ export default function Register() {
                             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
                                 {error}
                             </div>
+                        )}
+
+                        {/* Role Selection */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[#111418] dark:text-white text-base font-medium leading-normal">
+                                Bạn muốn đăng ký là
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setRole('learner')}
+                                    className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${role === 'learner'
+                                        ? 'border-[#2b8cee] bg-[#2b8cee]/5 text-[#2b8cee]'
+                                        : 'border-[#dce0e5] dark:border-[#3b4754] text-[#637588] dark:text-[#9dabb9] hover:border-[#2b8cee]/50'
+                                        }`}
+                                >
+                                    <span className="material-symbols-outlined">school</span>
+                                    <span className="font-bold">Học viên</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setRole('mentor')}
+                                    className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${role === 'mentor'
+                                        ? 'border-[#2b8cee] bg-[#2b8cee]/5 text-[#2b8cee]'
+                                        : 'border-[#dce0e5] dark:border-[#3b4754] text-[#637588] dark:text-[#9dabb9] hover:border-[#2b8cee]/50'
+                                        }`}
+                                >
+                                    <span className="material-symbols-outlined">supervisor_account</span>
+                                    <span className="font-bold">Mentor</span>
+                                </button>
+                            </div>
+                            {role === 'mentor' && (
+                                <p className="text-sm text-[#2b8cee] mt-1">
+                                    <span className="material-symbols-outlined text-sm align-middle mr-1">info</span>
+                                    Đăng ký Mentor cần được Admin duyệt trước khi kích hoạt
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Mentor-specific fields */}
+                        {role === 'mentor' && (
+                            <>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[#111418] dark:text-white text-base font-medium leading-normal">
+                                        Lý do muốn trở thành Mentor <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        value={motivation}
+                                        onChange={(e) => setMotivation(e.target.value)}
+                                        rows={3}
+                                        className="w-full resize-none rounded-lg text-[#111418] dark:text-white focus:ring-2 focus:ring-[#2b8cee]/50 border border-[#dce0e5] dark:border-[#3b4754] bg-white dark:bg-[#1c2127] focus:border-[#2b8cee] placeholder:text-[#9dabb9] p-4 text-base font-normal leading-normal transition-all duration-200"
+                                        placeholder="Chia sẻ lý do bạn muốn trở thành mentor và điều gì khiến bạn phù hợp..."
+                                        required
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[#111418] dark:text-white text-base font-medium leading-normal">
+                                        Kinh nghiệm giảng dạy
+                                    </label>
+                                    <textarea
+                                        value={teachingExperience}
+                                        onChange={(e) => setTeachingExperience(e.target.value)}
+                                        rows={2}
+                                        className="w-full resize-none rounded-lg text-[#111418] dark:text-white focus:ring-2 focus:ring-[#2b8cee]/50 border border-[#dce0e5] dark:border-[#3b4754] bg-white dark:bg-[#1c2127] focus:border-[#2b8cee] placeholder:text-[#9dabb9] p-4 text-base font-normal leading-normal transition-all duration-200"
+                                        placeholder="Mô tả kinh nghiệm giảng dạy tiếng Anh của bạn (nếu có)..."
+                                    />
+                                </div>
+                            </>
                         )}
 
                         {/* Username Field */}

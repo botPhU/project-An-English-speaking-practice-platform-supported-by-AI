@@ -244,35 +244,58 @@ export default function MentorApplications() {
 
                                 {/* Certificates */}
                                 <div className="mb-4">
-                                    <h3 className="font-bold text-gray-700 mb-2">📜 Chứng chỉ</h3>
+                                    <h3 className="font-bold text-gray-700 mb-2">📜 Chứng chỉ & Trình độ</h3>
                                     <div className="flex flex-wrap gap-2">
-                                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
-                                            {selectedApp.english_qualifications.english_level}
-                                        </span>
-                                        {selectedApp.english_qualifications.certificates.map((cert, i) => (
-                                            <span key={i} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                                                {cert.name}: {cert.score} ({cert.year})
+                                        {selectedApp.english_qualifications.english_level && (
+                                            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                                                {selectedApp.english_qualifications.english_level}
                                             </span>
-                                        ))}
+                                        )}
+                                        {Array.isArray(selectedApp.english_qualifications.certificates) && selectedApp.english_qualifications.certificates.length > 0 ? (
+                                            selectedApp.english_qualifications.certificates.map((cert: any, i: number) => (
+                                                <span key={i} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                                                    {typeof cert === 'string' ? cert : `${cert.name}: ${cert.score} (${cert.year})`}
+                                                </span>
+                                            ))
+                                        ) : typeof selectedApp.english_qualifications.certificates === 'string' && selectedApp.english_qualifications.certificates ? (
+                                            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                                                {selectedApp.english_qualifications.certificates}
+                                            </span>
+                                        ) : !selectedApp.english_qualifications.english_level && (
+                                            <span className="text-gray-400 italic text-sm">Chưa có thông tin</span>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Teaching */}
                                 <div className="mb-4">
-                                    <h3 className="font-bold text-gray-700 mb-2">📚 Giảng dạy</h3>
+                                    <h3 className="font-bold text-gray-700 mb-2">📚 Giảng dạy & Kỹ năng</h3>
                                     <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-2">
-                                        <p><strong>Chuyên môn:</strong> {selectedApp.teaching.specializations.join(', ')}</p>
-                                        <p><strong>Đối tượng:</strong> {selectedApp.teaching.target_students.join(', ')}</p>
-                                        <p><strong>Thời gian:</strong> {selectedApp.teaching.available_hours} giờ/tuần</p>
-                                        <p><strong>Kinh nghiệm:</strong> {selectedApp.teaching.experience}</p>
+                                        {selectedApp.teaching.specializations?.length > 0 && (
+                                            <p><strong>Chuyên môn:</strong> {Array.isArray(selectedApp.teaching.specializations) ? selectedApp.teaching.specializations.join(', ') : selectedApp.teaching.specializations}</p>
+                                        )}
+                                        {selectedApp.teaching.target_students?.length > 0 && (
+                                            <p><strong>Đối tượng:</strong> {selectedApp.teaching.target_students.join(', ')}</p>
+                                        )}
+                                        {selectedApp.teaching.available_hours > 0 && (
+                                            <p><strong>Thời gian:</strong> {selectedApp.teaching.available_hours} giờ/tuần</p>
+                                        )}
+                                        {selectedApp.teaching.experience && (
+                                            <p><strong>Kinh nghiệm:</strong> {selectedApp.teaching.experience}</p>
+                                        )}
+                                        {!selectedApp.teaching.specializations?.length && !selectedApp.teaching.experience && (
+                                            <p className="text-gray-400 italic">Chưa có thông tin chi tiết</p>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Motivation */}
-                                <div className="mb-4">
-                                    <h3 className="font-bold text-gray-700 mb-2">💡 Động lực</h3>
-                                    <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{selectedApp.teaching.motivation}</p>
-                                </div>
+                                {selectedApp.teaching.motivation && (
+                                    <div className="mb-4">
+                                        <h3 className="font-bold text-gray-700 mb-2">💡 Động lực</h3>
+                                        <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{selectedApp.teaching.motivation}</p>
+                                    </div>
+                                )}
 
                                 {/* Actions */}
                                 {selectedApp.status === 'pending' && (

@@ -9,9 +9,9 @@ export const mentorService = {
     updateProfile: (mentorId: number, data: any) => api.put(`/mentor/profile/${mentorId}`, data),
 
     // Learner Management
-    getLearners: (mentorId: number) => api.get(`/mentor/learners/${mentorId}`),
+    getLearners: (mentorId: number) => api.get(`/speaking-drills/mentor/learners?mentor_id=${mentorId}`),
     getLearnerSessions: (mentorId: number, learnerId: number) =>
-        api.get(`/mentor/learners/${mentorId}/${learnerId}/sessions`),
+        api.get(`/speaking-drills/sessions?role=mentor&user_id=${mentorId}&learner_id=${learnerId}`),
     assessLearner: (data: { mentor_id: number; learner_id: number; assessment: any }) =>
         api.post('/mentor/assess', data),
 

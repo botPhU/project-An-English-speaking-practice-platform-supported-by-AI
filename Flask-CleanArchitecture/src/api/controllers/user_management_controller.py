@@ -185,3 +185,57 @@ def get_user_stats():
     """
     stats = user_service.get_user_stats()
     return jsonify(stats), 200
+
+
+@bp.route('/<int:user_id>/enable', methods=['PUT'])
+def enable_user(user_id):
+    """
+    Enable (activate) a user account
+    ---
+    put:
+      summary: Enable a user account
+      tags:
+        - User Management
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: User enabled successfully
+        404:
+          description: User not found
+    """
+    user = user_service.enable_user(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify({'message': 'User enabled successfully', 'user': user}), 200
+
+
+@bp.route('/<int:user_id>/disable', methods=['PUT'])
+def disable_user(user_id):
+    """
+    Disable (deactivate) a user account
+    ---
+    put:
+      summary: Disable a user account
+      tags:
+        - User Management
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: User disabled successfully
+        404:
+          description: User not found
+    """
+    user = user_service.disable_user(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify({'message': 'User disabled successfully', 'user': user}), 200

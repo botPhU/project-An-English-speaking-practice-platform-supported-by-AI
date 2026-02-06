@@ -22,6 +22,32 @@ export interface BookingUpdateData {
     booking: any;
 }
 
+// Matchmaking interfaces
+export interface MatchFoundData {
+    matched: boolean;
+    buddy: {
+        id: number;
+        full_name: string;
+        avatar_url?: string;
+    };
+    room_name: string;
+    topic?: string;
+}
+
+export interface PracticeInviteData {
+    fromUserId: string;
+    fromUserName: string;
+    fromUserAvatar?: string;
+    topic?: string;
+}
+
+export interface InviteAcceptedData {
+    userId: string;
+    userName?: string;
+    userAvatar?: string;
+    roomName: string;
+}
+
 class SocketService {
     private socket: Socket | null = null;
     private userId: string | null = null;
@@ -295,6 +321,162 @@ class SocketService {
         this.callAcceptedCallback = null;
         this.callDeclinedCallback = null;
         this.callFailedCallback = null;
+    }
+
+    // ============ MATCHMAKING / STUDY BUDDY METHODS ============
+
+    private matchFoundCallback: ((data: MatchFoundData) => void) | null = null;
+    private practiceInviteCallback: ((data: PracticeInviteData) => void) | null = null;
+    private inviteAcceptedCallback: ((data: InviteAcceptedData) => void) | null = null;
+    private inviteDeclinedCallback: ((data: { userId: string; reason: string }) => void) | null = null;
+    private sessionStartingCallback: ((data: { buddyId: string; roomName: string }) => void) | null = null;
+    private sessionEndedCallback: ((data: { endedBy: string; roomName: string }) => void) | null = null;
+    private matchmakingQueuedCallback: ((data: { matched: boolean; message: string; position: number }) => void) | null = null;
+
+    // Initialize matchmaking event listeners
+    initMatchmakingEvents(): void {
+        if (!this.socket) return;
+
+        this.socket.on('match_found', (data: MatchFoundData) => {
+            console.log('[SocketService] Match found:', data);
+            if (this.matchFoundCallback) {
+                this.matchFoundCallback(data);
+            }
+        });
+
+        this.socket.on('matchmaking_queued', (data: any) => {
+            console.log('[SocketService] Matchmaking queued:', data);
+            if (this.matchmakingQueuedCallback) {
+                this.matchmakingQueuedCallback(data);
+            }
+        });
+
+        this.socket.on('matchmaking_cancelled', (data: any) => {
+            console.log('[SocketService] Matchmaking cancelled:', data);
+        });
+
+        this.socket.on('practice_invite_received', (data: PracticeInviteData) => {
+            console.log('[SocketService] Practice invite received:', data);
+            if (this.practiceInviteCallback) {
+                this.practiceInviteCallback(data);
+            }
+        });
+
+        this.socket.on('invite_sent', (data: any) => {
+            console.log('[SocketService] Invite sent confirmation:', data);
+        });
+
+        this.socket.on('invite_failed', (data: any) => {
+            console.log('[SocketService] Invite failed:', data);
+        });
+
+        this.socket.on('invite_accepted', (data: InviteAcceptedData) => {
+            console.log('[SocketService] Invite accepted:', data);
+            if (this.inviteAcceptedCallback) {
+                this.inviteAcceptedCallback(data);
+            }
+        });
+
+        this.socket.on('invite_declined', (data: { userId: string; reason: string }) => {
+            console.log('[SocketService] Invite declined:', data);
+            if (this.inviteDeclinedCallback) {
+                this.inviteDeclinedCallback(data);
+            }
+        });
+
+        this.socket.on('session_starting', (data: { buddyId: string; roomName: string }) => {
+            console.log('[SocketService] Session starting:', data);
+            if (this.sessionStartingCallback) {
+                this.sessionStartingCallback(data);
+            }
+        });
+
+        this.socket.on('session_ended', (data: { endedBy: string; roomName: string }) => {
+            console.log('[SocketService] Session ended:', data);
+            if (this.sessionEndedCallback) {
+                this.sessionEndedCallback(data);
+            }
+        });
+    }
+
+    // Request matchmaking via WebSocket
+    requestMatchmaking(userId: string, userName: string, userAvatar: string, level?: string, topic?: string): void {
+        if (this.socket?.connected) {
+            this.socket.emit('request_matchmaking', { userId, userName, userAvatar, level, topic });
+            console.log('[SocketService] Requesting matchmaking for:', userId);
+        }
+    }
+
+    // Cancel matchmaking
+    cancelMatchmaking(userId: string): void {
+        if (this.socket?.connected) {
+            this.socket.emit('cancel_matchmaking', { userId });
+            console.log('[SocketService] Cancelling matchmaking for:', userId);
+        }
+    }
+
+    // Send practice invite
+    sendPracticeInvite(fromUserId: string, fromUserName: string, fromUserAvatar: string, toUserId: string, topic?: string): void {
+        if (this.socket?.connected) {
+            this.socket.emit('send_practice_invite', { fromUserId, fromUserName, fromUserAvatar, toUserId, topic });
+            console.log('[SocketService] Sending practice invite from:', fromUserId, 'to:', toUserId);
+        }
+    }
+
+    // Respond to practice invite
+    respondPracticeInvite(userId: string, fromUserId: string, accept: boolean): void {
+        if (this.socket?.connected) {
+            this.socket.emit('respond_practice_invite', { userId, fromUserId, accept });
+            console.log('[SocketService] Responding to invite from:', fromUserId, 'accept:', accept);
+        }
+    }
+
+    // End practice session
+    endPracticeSession(userId: string, buddyId: string, roomName: string): void {
+        if (this.socket?.connected) {
+            this.socket.emit('end_practice_session', { userId, buddyId, roomName });
+            console.log('[SocketService] Ending practice session:', roomName);
+        }
+    }
+
+    // Callback registrations
+    onMatchFound(callback: (data: MatchFoundData) => void): void {
+        this.matchFoundCallback = callback;
+    }
+
+    onMatchmakingQueued(callback: (data: { matched: boolean; message: string; position: number }) => void): void {
+        this.matchmakingQueuedCallback = callback;
+    }
+
+    onPracticeInvite(callback: (data: PracticeInviteData) => void): void {
+        this.practiceInviteCallback = callback;
+    }
+
+    onInviteAccepted(callback: (data: InviteAcceptedData) => void): void {
+        this.inviteAcceptedCallback = callback;
+    }
+
+    onInviteDeclined(callback: (data: { userId: string; reason: string }) => void): void {
+        this.inviteDeclinedCallback = callback;
+    }
+
+    onSessionStarting(callback: (data: { buddyId: string; roomName: string }) => void): void {
+        this.sessionStartingCallback = callback;
+    }
+
+    onSessionEnded(callback: (data: { endedBy: string; roomName: string }) => void): void {
+        this.sessionEndedCallback = callback;
+    }
+
+    // Remove matchmaking callbacks
+    removeMatchmakingCallbacks(): void {
+        this.matchFoundCallback = null;
+        this.practiceInviteCallback = null;
+        this.inviteAcceptedCallback = null;
+        this.inviteDeclinedCallback = null;
+        this.sessionStartingCallback = null;
+        this.sessionEndedCallback = null;
+        this.matchmakingQueuedCallback = null;
     }
 }
 

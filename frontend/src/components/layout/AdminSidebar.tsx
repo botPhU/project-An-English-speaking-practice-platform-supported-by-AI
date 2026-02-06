@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { ADMIN_ROUTES } from '../../routes/paths';
 
 interface NavItem {
@@ -22,6 +23,7 @@ const navItems: NavItem[] = [
 
 const AdminSidebar: React.FC = () => {
     const location = useLocation();
+    const { user } = useAuth();
 
     const isActive = (path: string) => {
         if (path === ADMIN_ROUTES.DASHBOARD) {
@@ -84,14 +86,18 @@ const AdminSidebar: React.FC = () => {
 
                     {/* User Info */}
                     <div className="flex items-center gap-3 mt-4 px-3 pt-4 border-t border-[#283039]">
-                        <div
-                            className="bg-center bg-no-repeat bg-cover rounded-full size-10 shrink-0 border-2 border-[#283039]"
-                            style={{
-                                backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQhMo4J4VgtN7o9g7aUrJGV74X0ke8FKm-tZmaqrZTGQbAXw3dogSwXCA-rv_tsjXL12P9lRl0mj3qRYrd73mw7KJycrdN8M3u-lI2MsLZZNBMimAQr4BRE6jsSVOB_DD1nOD-8iIkCn2SD3SlgbfTFv0FCmeYnSRAWabCPp49CApY2OCoRuH95dvFnLXzHbF6JiFaiTqGTn9Sj5J2v8kiBkVomQvcX-xRLyWJVJJy5d4I9HJBsYT-_kwUUXywLTyvRZMZaRpIpkE")'
-                            }}
-                        />
+                        {user?.avatar ? (
+                            <div
+                                className="bg-center bg-no-repeat bg-cover rounded-full size-10 shrink-0 border-2 border-[#283039]"
+                                style={{ backgroundImage: `url("${user.avatar}")` }}
+                            />
+                        ) : (
+                            <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold border-2 border-[#283039]">
+                                {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+                            </div>
+                        )}
                         <div className="flex flex-col overflow-hidden">
-                            <p className="text-white text-sm font-medium truncate">Minh Anh</p>
+                            <p className="text-white text-sm font-medium truncate">{user?.name || 'Admin'}</p>
                             <p className="text-[#9dabb9] text-xs truncate">Quản trị viên</p>
                         </div>
                     </div>

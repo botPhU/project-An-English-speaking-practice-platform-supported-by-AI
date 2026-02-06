@@ -192,4 +192,29 @@ export const learnerService = {
 
     updateBooking: (bookingId: number, data: { status: string }) =>
         api.put(`/learner/booking/${bookingId}`, data),
+
+    // Study Buddy / Matchmaking
+    getOnlineLearners: (userId: number, level?: string, limit?: number) =>
+        api.get('/study-buddy/online-learners', { params: { user_id: userId, level, limit } }),
+
+    findBuddies: (userId: number, level?: string, limit?: number) =>
+        api.get('/study-buddy/find', { params: { user_id: userId, level, limit } }),
+
+    requestMatch: (userId: number, topic?: string, level?: string) =>
+        api.post('/study-buddy/match', { user_id: userId, topic, level }),
+
+    checkMatchStatus: (userId: number) =>
+        api.get('/study-buddy/status', { params: { user_id: userId } }),
+
+    cancelMatchRequest: (userId: number) =>
+        api.post('/study-buddy/cancel', { user_id: userId }),
+
+    sendPracticeInvite: (fromUserId: number, toUserId: number, topic?: string) =>
+        api.post('/study-buddy/invite', { from_user_id: fromUserId, to_user_id: toUserId, topic }),
+
+    respondToInvite: (userId: number, fromUserId: number, accept: boolean) =>
+        api.post('/study-buddy/invite/respond', { user_id: userId, from_user_id: fromUserId, accept }),
+
+    endPracticeSession: (userId: number) =>
+        api.post('/study-buddy/end', { user_id: userId }),
 };

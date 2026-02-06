@@ -73,3 +73,48 @@ def end_session():
     
     success = study_buddy_service.end_session(user_id)
     return jsonify({'success': success}), 200
+
+
+@study_buddy_bp.route('/online-learners', methods=['GET'])
+def get_online_learners():
+    """Get list of online learners available for practice"""
+    user_id = request.args.get('user_id', type=int)
+    level = request.args.get('level')
+    limit = request.args.get('limit', 20, type=int)
+    
+    if not user_id:
+        return jsonify({'error': 'user_id is required'}), 400
+    
+    learners = study_buddy_service.get_online_learners(user_id, level, limit)
+    return jsonify(learners), 200
+
+
+@study_buddy_bp.route('/invite', methods=['POST'])
+def send_invite():
+    """Send practice invite to another user"""
+    data = request.get_json()
+    from_user_id = data.get('from_user_id')
+    to_user_id = data.get('to_user_id')
+    topic = data.get('topic')
+    
+    if not from_user_id or not to_user_id:
+        return jsonify({'error': 'from_user_id and to_user_id are required'}), 400
+    
+    result = study_buddy_service.send_invite(from_user_id, to_user_id, topic)
+    return jsonify(result), 200
+
+
+@study_buddy_bp.route('/invite/respond', methods=['POST'])
+def respond_invite():
+    """Respond to a practice invite"""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    from_user_id = data.get('from_user_id')
+    accept = data.get('accept', False)
+    
+    if not user_id or not from_user_id:
+        return jsonify({'error': 'user_id and from_user_id are required'}), 400
+    
+    result = study_buddy_service.respond_to_invite(user_id, from_user_id, accept)
+    return jsonify(result), 200
+

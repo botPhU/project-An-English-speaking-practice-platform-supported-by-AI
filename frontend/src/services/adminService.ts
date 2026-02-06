@@ -40,6 +40,8 @@ export const adminService = {
     getMentorStats: () => api.get('/admin/mentors/stats'),
     getPendingMentors: () => api.get('/admin/mentors/pending'),
     approveMentor: (mentorId: string) => api.post(`/admin/mentors/${mentorId}/approve`),
+    rejectMentor: (mentorId: string, reason?: string) =>
+        api.post(`/admin/mentors/${mentorId}/reject`, { reason: reason || 'Đơn đăng ký không đạt yêu cầu' }),
     updateMentorStatus: (mentorId: string, status: string) =>
         api.put(`/admin/mentors/${mentorId}/status`, { status }),
     updateMentorSkills: (mentorId: string, skills: string[]) =>
@@ -83,6 +85,10 @@ export const adminService = {
     getPolicies: () => api.get('/admin/policies'),
     createPolicy: (data: any) => api.post('/admin/policies', data),
     updatePolicy: (policyId: string, data: any) => api.put(`/admin/policies/${policyId}`, data),
+    deletePolicy: (policyId: string) => api.delete(`/admin/policies/${policyId}`),
+
+    // Purchase Stats
+    getPurchaseStats: () => api.get('/admin/purchases/stats'),
 
     // Reports
     getStatistics: () => api.get('/admin/statistics'),

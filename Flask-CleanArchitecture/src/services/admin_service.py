@@ -9,8 +9,9 @@ from infrastructure.models.user_model import UserModel
 from infrastructure.models.progress_model import ProgressModel
 from infrastructure.models.admin_models import (
     SupportTicketModel, TicketMessageModel, ActivityLogModel,
-    SystemSettingModel, MentorApplicationModel
+    SystemSettingModel
 )
+from infrastructure.models.mentor_application_model import MentorApplicationModel
 from infrastructure.models.subscription_models import PaymentHistoryModel
 
 
@@ -239,9 +240,9 @@ class AdminService:
                     actions.append({
                         'id': f'mentor_{app.id}',
                         'type': 'mentor_approval',
-                        'user': user.full_name if user else 'Unknown',
+                        'user': app.full_name or (user.full_name if user else 'Unknown'),
                         'action': 'Đơn đăng ký mentor mới',
-                        'context': app.specialty or 'Chờ phê duyệt',
+                        'context': app.motivation or 'Chờ phê duyệt',
                         'timestamp': app.created_at.isoformat() if app.created_at else None,
                         'icon': 'verified',
                         'color': 'bg-blue-500/20 text-blue-400'
@@ -400,7 +401,7 @@ class AdminService:
             return False
 
     def approve_mentor(self, mentor_id):
-        """Approve a pending mentor"""
+        """Approve a pending mentor - change user role from learner to mentor"""
         try:
             with get_db_session() as session:
                 application = session.query(MentorApplicationModel)\
@@ -422,6 +423,25 @@ class AdminService:
             print(f"Approve mentor error: {e}")
             return False
 
+    def reject_mentor(self, mentor_id, reason=''):
+        """Reject a pending mentor application"""
+        try:
+            with get_db_session() as session:
+                application = session.query(MentorApplicationModel)\
+                    .filter_by(user_id=mentor_id, status='pending').first()
+                
+                if application:
+                    application.status = 'rejected'
+                    application.rejection_reason = reason
+                    application.reviewed_at = datetime.now()
+                    
+                    # User remains as learner - no role change
+                    return True
+                return False
+        except Exception as e:
+            print(f"Reject mentor error: {e}")
+            return False
+
     def get_pending_mentors(self):
         """Get list of mentors pending approval from database"""
         try:
@@ -435,9 +455,10 @@ class AdminService:
                     user = session.query(UserModel).get(app.user_id)
                     result.append({
                         'id': app.user_id,
-                        'name': user.full_name if user else 'Unknown',
-                        'email': user.email if user else '',
-                        'specialty': app.specialty,
+                        'application_id': app.id,
+                        'name': app.full_name or (user.full_name if user else 'Unknown'),
+                        'email': app.email or (user.email if user else ''),
+                        'specialty': app.motivation or app.teaching_experience or 'Chờ phê duyệt',
                         'applied_date': app.created_at.strftime('%d/%m/%Y') if app.created_at else ''
                     })
                 return result
@@ -615,4 +636,90 @@ class AdminService:
                 }
         except Exception as e:
             print(f"Support stats error: {e}")
+            return {}
+
+    # ==================== PURCHASE HISTORY ====================
+
+    def get_purchase_history(self, status='all', page=1, limit=20):
+        """Get purchase/payment history from database"""
+        try:
+            with get_db_session() as session:
+                from infrastructure.models.package_model import PackageModel
+                
+                query = session.query(PaymentHistoryModel)\
+                    .order_by(PaymentHistoryModel.paid_at.desc())
+                
+                if status != 'all':
+                    query = query.filter_by(status=status)
+                
+                total = query.count()
+                payments = query.offset((page - 1) * limit).limit(limit).all()
+                
+                result = []
+                for p in payments:
+                    user = session.query(UserModel).get(p.user_id) if p.user_id else None
+                    package = session.query(PackageModel).get(p.plan_id) if p.plan_id else None
+                    
+                    result.append({
+                        'id': str(p.id),
+                        'user': {
+                            'id': user.id if user else 0,
+                            'name': user.full_name if user else 'Unknown',
+                            'email': user.email if user else ''
+                        },
+                        'package': {
+                            'id': package.id if package else 0,
+                            'name': package.name if package else f'Gói {p.plan_id}'
+                        },
+                        'amount': float(p.amount) if p.amount else 0,
+                        'status': p.status or 'pending',
+                        'payment_method': p.payment_method or 'Unknown',
+                        'transaction_id': p.transaction_id or '',
+                        'paid_at': p.paid_at.strftime('%d/%m/%Y %H:%M') if p.paid_at else '',
+                        'created_at': p.created_at.strftime('%d/%m/%Y %H:%M') if p.created_at else ''
+                    })
+                
+                return {
+                    'purchases': result,
+                    'total': total,
+                    'page': page,
+                    'limit': limit,
+                    'total_pages': (total + limit - 1) // limit if total > 0 else 0
+                }
+        except Exception as e:
+            print(f"Get purchase history error: {e}")
+            return {'purchases': [], 'total': 0, 'page': 1, 'limit': limit}
+
+    def get_purchase_stats(self):
+        """Get purchase statistics for dashboard"""
+        try:
+            with get_db_session() as session:
+                from sqlalchemy import func
+                
+                total = session.query(func.count(PaymentHistoryModel.id)).scalar() or 0
+                completed = session.query(func.count(PaymentHistoryModel.id))\
+                    .filter_by(status='completed').scalar() or 0
+                pending = session.query(func.count(PaymentHistoryModel.id))\
+                    .filter_by(status='pending').scalar() or 0
+                
+                total_revenue = session.query(func.sum(PaymentHistoryModel.amount))\
+                    .filter_by(status='completed').scalar() or 0
+                
+                # This month's revenue
+                from datetime import date
+                today = date.today()
+                first_of_month = today.replace(day=1)
+                month_revenue = session.query(func.sum(PaymentHistoryModel.amount))\
+                    .filter_by(status='completed')\
+                    .filter(PaymentHistoryModel.paid_at >= first_of_month).scalar() or 0
+                
+                return {
+                    'total_purchases': {'count': total, 'change': ''},
+                    'completed_purchases': {'count': completed, 'percentage': f'{(completed/max(total,1))*100:.1f}%'},
+                    'pending_purchases': {'count': pending, 'label': 'Chờ thanh toán'},
+                    'total_revenue': {'amount': float(total_revenue), 'currency': 'VND'},
+                    'month_revenue': {'amount': float(month_revenue), 'change': '+0%'}
+                }
+        except Exception as e:
+            print(f"Purchase stats error: {e}")
             return {}

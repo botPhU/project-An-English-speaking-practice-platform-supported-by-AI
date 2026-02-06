@@ -40,9 +40,10 @@ const MentorManagement: React.FC = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [mentorsResponse, statsResponse] = await Promise.all([
+            const [mentorsResponse, statsResponse, pendingResponse] = await Promise.all([
                 adminService.getMentors(),
-                adminService.getMentorStats()
+                adminService.getMentorStats(),
+                adminService.getPendingMentors()
             ]);
 
             // Handle various API response formats for mentors
@@ -53,6 +54,12 @@ const MentorManagement: React.FC = () => {
                 mentorData = mentorsResponse.data.mentors;
             } else if (mentorsResponse.data?.data && Array.isArray(mentorsResponse.data.data)) {
                 mentorData = mentorsResponse.data.data;
+            }
+
+            // Handle pending mentors response
+            let pendingData: any[] = [];
+            if (Array.isArray(pendingResponse.data)) {
+                pendingData = pendingResponse.data;
             }
 
             const mappedMentors = mentorData.map((mentor: any) => ({
@@ -67,7 +74,21 @@ const MentorManagement: React.FC = () => {
                 joinedDate: String(mentor.joined_date || mentor.created_at || 'N/A')
             }));
 
-            setMentors(mappedMentors);
+            // Map pending mentors (from mentor_applications table)
+            const mappedPending = pendingData.map((app: any) => ({
+                id: String(app.id || app.user_id || ''),
+                name: String(app.name || app.full_name || 'Unknown'),
+                avatar: '',
+                email: String(app.email || ''),
+                specialty: String(app.specialty || app.motivation || 'Chờ phê duyệt'),
+                rating: 0,
+                students: 0,
+                status: 'pending' as const,
+                joinedDate: String(app.applied_date || app.created_at || 'N/A')
+            }));
+
+            // Merge both lists - pending first for visibility
+            setMentors([...mappedPending, ...mappedMentors]);
 
             // Map stats response safely
             const apiStats = statsResponse.data || {};
@@ -135,12 +156,25 @@ const MentorManagement: React.FC = () => {
     const handleApproveMentor = async (id: string) => {
         try {
             await adminService.approveMentor(id);
-            // Update local state
-            setMentors(prev => prev.map(m =>
-                m.id === id ? { ...m, status: 'active' as const } : m
-            ));
+            // Refresh data to get updated list
+            fetchData();
+            alert('Đã phê duyệt mentor thành công! Tài khoản đã được chuyển sang role Mentor.');
         } catch (err) {
             console.error('Error approving mentor:', err);
+            alert('Lỗi khi phê duyệt mentor');
+        }
+    };
+
+    const handleRejectMentor = async (id: string) => {
+        const reason = prompt('Nhập lý do từ chối (tùy chọn):');
+        try {
+            await adminService.rejectMentor(id, reason || undefined);
+            // Refresh data to get updated list
+            fetchData();
+            alert('Đã từ chối đơn đăng ký mentor.');
+        } catch (err) {
+            console.error('Error rejecting mentor:', err);
+            alert('Lỗi khi từ chối đơn đăng ký');
         }
     };
 
@@ -348,13 +382,22 @@ const MentorManagement: React.FC = () => {
                                                         <span className="material-symbols-outlined text-[20px]">visibility</span>
                                                     </button>
                                                     {mentor.status === 'pending' && (
-                                                        <button
-                                                            onClick={() => handleApproveMentor(mentor.id)}
-                                                            className="p-1.5 hover:bg-[#0bda5b]/20 text-[#9dabb9] hover:text-[#0bda5b] rounded-lg transition-colors"
-                                                            title="Phê duyệt"
-                                                        >
-                                                            <span className="material-symbols-outlined text-[20px]">check_circle</span>
-                                                        </button>
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleApproveMentor(mentor.id)}
+                                                                className="p-1.5 hover:bg-[#0bda5b]/20 text-[#9dabb9] hover:text-[#0bda5b] rounded-lg transition-colors"
+                                                                title="Chấp nhận"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRejectMentor(mentor.id)}
+                                                                className="p-1.5 hover:bg-red-500/20 text-[#9dabb9] hover:text-red-500 rounded-lg transition-colors"
+                                                                title="Từ chối"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[20px]">cancel</span>
+                                                            </button>
+                                                        </>
                                                     )}
                                                     <button
                                                         className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors"

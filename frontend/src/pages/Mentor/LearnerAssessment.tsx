@@ -5,18 +5,29 @@ import { useAuth } from '../../context/AuthContext';
 
 interface Learner {
     id: number;
-    user_name: string;
+    user_name?: string;
     full_name: string;
     email: string;
+    avatar_url?: string;
+    assigned_at?: string;
+    stats?: {
+        total_sessions: number;
+        average_score: number;
+        total_turns: number;
+    };
+    recent_session?: any;
 }
 
 interface Session {
     id: number;
-    session_type: string;
+    session_type?: string;
     topic: string;
-    overall_score: number | null;
-    is_completed: boolean;
-    created_at: string;
+    average_score?: number;
+    is_active?: boolean;
+    started_at?: string;
+    ended_at?: string;
+    total_turns?: number;
+    messages?: any[];
 }
 
 // Learner Assessment - Tổ chức đánh giá và xếp level cho learner
@@ -35,6 +46,7 @@ export default function LearnerAssessment() {
         notes: ''
     });
     const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+    const [showDetailModal, setShowDetailModal] = useState(false);
 
     const assessmentCategories = [
         { name: 'Speaking', icon: 'record_voice_over', weight: 30, key: 'speaking' as const },
@@ -60,7 +72,8 @@ export default function LearnerAssessment() {
             setLoading(true);
             try {
                 const response = await mentorService.getLearners(Number(user.id));
-                setLearners(response.data || []);
+                // API returns { success: true, learners: [...] }
+                setLearners(response.data.learners || response.data || []);
             } catch (error) {
                 console.error('Error fetching learners:', error);
                 setLearners([]);
@@ -200,23 +213,36 @@ export default function LearnerAssessment() {
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <div className="size-10 rounded-full bg-purple-600/20 flex items-center justify-center text-purple-400 font-bold">
-                                                    {learner.full_name?.charAt(0) || learner.user_name.charAt(0)}
+                                                    {learner.full_name?.charAt(0) || learner.user_name?.charAt(0) || 'L'}
                                                 </div>
                                                 <div>
                                                     <p className="font-medium text-white">{learner.full_name || learner.user_name}</p>
                                                     <p className="text-xs text-[#9dabb9]">{learner.email}</p>
                                                 </div>
                                             </div>
-                                            <button
-                                                className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-colors"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedLearner(learner);
-                                                    setShowAssessmentModal(true);
-                                                }}
-                                            >
-                                                Đánh giá
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    className="px-3 py-2 rounded-lg bg-blue-600/20 text-blue-400 text-sm font-bold hover:bg-blue-600/30 transition-colors"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedLearner(learner);
+                                                        setShowDetailModal(true);
+                                                    }}
+                                                    title="Xem thông tin chi tiết"
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">visibility</span>
+                                                </button>
+                                                <button
+                                                    className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-colors"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedLearner(learner);
+                                                        setShowAssessmentModal(true);
+                                                    }}
+                                                >
+                                                    Đánh giá
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -240,15 +266,15 @@ export default function LearnerAssessment() {
                                         <div key={session.id} className="p-3 rounded-lg bg-[#3e4854]/20">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="font-medium text-white">{session.topic || 'Không có chủ đề'}</span>
-                                                {session.overall_score && (
+                                                {session.average_score && (
                                                     <span className="px-2 py-1 rounded bg-purple-600/20 text-purple-400 text-xs font-bold">
-                                                        {getLevel(session.overall_score)}
+                                                        {getLevel(session.average_score)}
                                                     </span>
                                                 )}
                                             </div>
                                             <div className="flex items-center justify-between text-xs text-[#9dabb9]">
                                                 <span>{session.session_type}</span>
-                                                <span>{session.overall_score ? `${session.overall_score}/100` : 'Chưa chấm'}</span>
+                                                <span>{session.average_score ? `${Math.round(session.average_score)}/100` : 'Chưa chấm'}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -326,6 +352,120 @@ export default function LearnerAssessment() {
                                 className="flex-1 px-4 py-3 rounded-lg bg-purple-600 text-white font-bold hover:bg-purple-700 transition-colors"
                             >
                                 Lưu đánh giá
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Learner Detail Modal */}
+            {showDetailModal && selectedLearner && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-[#1a222a] rounded-2xl w-full max-w-2xl border border-[#3b4754] max-h-[90vh] overflow-y-auto">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-[#3e4854]/30">
+                            <h3 className="text-xl font-bold text-white">Thông tin học viên</h3>
+                            <button
+                                onClick={() => setShowDetailModal(false)}
+                                className="text-[#9dabb9] hover:text-white transition-colors"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        {/* Profile Section */}
+                        <div className="p-6">
+                            <div className="flex items-start gap-6 mb-6">
+                                {/* Avatar */}
+                                <div className="size-24 rounded-full bg-purple-600/20 flex items-center justify-center">
+                                    {selectedLearner.avatar_url ? (
+                                        <img
+                                            src={selectedLearner.avatar_url}
+                                            alt={selectedLearner.full_name}
+                                            className="size-24 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-4xl font-bold text-purple-400">
+                                            {selectedLearner.full_name?.charAt(0) || selectedLearner.user_name?.charAt(0) || 'L'}
+                                        </span>
+                                    )}
+                                </div>
+                                {/* Info */}
+                                <div className="flex-1">
+                                    <h4 className="text-2xl font-bold text-white mb-1">
+                                        {selectedLearner.full_name || selectedLearner.user_name || 'Không có tên'}
+                                    </h4>
+                                    <p className="text-[#9dabb9] mb-3">{selectedLearner.email}</p>
+                                    {selectedLearner.assigned_at && (
+                                        <p className="text-sm text-[#9dabb9]">
+                                            <span className="material-symbols-outlined text-sm align-middle mr-1">calendar_today</span>
+                                            Được gán từ: {new Date(selectedLearner.assigned_at).toLocaleDateString('vi-VN')}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Stats Grid */}
+                            {selectedLearner.stats && (
+                                <div className="grid grid-cols-3 gap-4 mb-6">
+                                    <div className="bg-[#283039] rounded-xl p-4 text-center">
+                                        <div className="size-12 rounded-xl bg-blue-500/20 flex items-center justify-center mx-auto mb-2">
+                                            <span className="material-symbols-outlined text-blue-400">record_voice_over</span>
+                                        </div>
+                                        <p className="text-2xl font-bold text-white">{selectedLearner.stats.total_sessions}</p>
+                                        <p className="text-xs text-[#9dabb9]">Tổng phiên học</p>
+                                    </div>
+                                    <div className="bg-[#283039] rounded-xl p-4 text-center">
+                                        <div className="size-12 rounded-xl bg-green-500/20 flex items-center justify-center mx-auto mb-2">
+                                            <span className="material-symbols-outlined text-green-400">score</span>
+                                        </div>
+                                        <p className="text-2xl font-bold text-white">{Math.round(selectedLearner.stats.average_score || 0)}</p>
+                                        <p className="text-xs text-[#9dabb9]">Điểm trung bình</p>
+                                    </div>
+                                    <div className="bg-[#283039] rounded-xl p-4 text-center">
+                                        <div className="size-12 rounded-xl bg-purple-500/20 flex items-center justify-center mx-auto mb-2">
+                                            <span className="material-symbols-outlined text-purple-400">chat</span>
+                                        </div>
+                                        <p className="text-2xl font-bold text-white">{selectedLearner.stats.total_turns || 0}</p>
+                                        <p className="text-xs text-[#9dabb9]">Tổng lượt nói</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Recent Sessions */}
+                            <div>
+                                <h5 className="font-bold text-white mb-3">Phiên học gần đây</h5>
+                                {learnerSessions.length === 0 ? (
+                                    <p className="text-[#9dabb9] text-sm">Chưa có phiên học nào</p>
+                                ) : (
+                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {learnerSessions.slice(0, 5).map((session) => (
+                                            <div key={session.id} className="flex items-center justify-between p-3 rounded-lg bg-[#283039]">
+                                                <div>
+                                                    <p className="font-medium text-white">{session.topic || 'Không có chủ đề'}</p>
+                                                    <p className="text-xs text-[#9dabb9]">
+                                                        {session.started_at ? new Date(session.started_at).toLocaleDateString('vi-VN') : 'N/A'}
+                                                    </p>
+                                                </div>
+                                                {session.average_score && (
+                                                    <span className="px-3 py-1 rounded-lg bg-purple-600/20 text-purple-400 font-bold">
+                                                        {Math.round(session.average_score)}/100
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-[#3e4854]/30">
+                            <button
+                                onClick={() => setShowDetailModal(false)}
+                                className="w-full px-4 py-3 rounded-lg bg-[#283039] text-white font-bold hover:bg-[#3e4854] transition-colors"
+                            >
+                                Đóng
                             </button>
                         </div>
                     </div>

@@ -98,13 +98,19 @@ def register():
             # Create new user
             hashed_password = AuthService.hash_password(data['password'])
             
+            # Determine if this is a mentor registration request
+            requested_role = data.get('role', 'learner')
+            is_mentor_registration = (requested_role == 'mentor')
+            
+            # ALL users start as learner with active status
+            # Mentor registration creates a pending application for admin review
             new_user = UserModel(
                 user_name=data['user_name'],
                 email=data.get('email'),
                 password=hashed_password,
                 full_name=data.get('full_name', ''),
-                role=data.get('role', 'learner'),
-                status=True,
+                role='learner',  # Always start as learner
+                status=True,  # Always active
                 created_at=datetime.now(),
                 updated_at=datetime.now()
             )
@@ -112,7 +118,45 @@ def register():
             session.add(new_user)
             session.flush()  # Get the ID before commit
             
-            # Generate tokens
+            # If mentor registration, create mentor application for admin review
+            if is_mentor_registration:
+                from infrastructure.models.mentor_application_model import MentorApplicationModel
+                import json
+                
+                # Create application record - admin will review and approve
+                application = MentorApplicationModel(
+                    user_id=new_user.id,
+                    full_name=data.get('full_name', data['user_name']),
+                    email=data.get('email', ''),
+                    phone=data.get('phone'),
+                    english_level=data.get('english_level', 'advanced'),
+                    motivation=data.get('motivation', ''),
+                    teaching_experience=data.get('teaching_experience', ''),
+                    specializations=json.dumps(data.get('specializations', [])) if data.get('specializations') else None,
+                    years_experience=data.get('years_experience', 0),
+                    status='pending'
+                )
+                session.add(application)
+                session.flush()
+                
+                # Generate tokens - user can login as learner while waiting for approval
+                tokens = AuthService.create_access_token(new_user.id, 'learner')
+                
+                return jsonify({
+                    'message': 'Đăng ký thành công! Đơn đăng ký Mentor đang chờ Admin phê duyệt. Bạn có thể sử dụng các tính năng learner trong lúc chờ đợi.',
+                    'pending_mentor_approval': True,
+                    'application_id': application.id,
+                    'user': {
+                        'id': new_user.id,
+                        'user_name': new_user.user_name,
+                        'email': new_user.email,
+                        'role': 'learner',  # Current role is learner
+                        'pending_mentor': True
+                    },
+                    **tokens
+                }), 201
+            
+            # Generate tokens for learner registration
             tokens = AuthService.create_access_token(new_user.id, new_user.role)
             
             return jsonify({
@@ -127,6 +171,8 @@ def register():
             }), 201
             
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 

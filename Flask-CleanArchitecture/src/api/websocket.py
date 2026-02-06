@@ -223,3 +223,185 @@ def send_call_notification(target_user_id: str, caller_name: str, caller_avatar:
         }, room=target_sid)
         return True
     return False
+
+
+# ============ MATCHMAKING / STUDY BUDDY EVENTS ============
+
+# Store pending invites: {target_user_id: {from_user_id, from_user_name, from_user_avatar, topic, created_at}}
+pending_invites = {}
+
+@socketio.on('request_matchmaking')
+def handle_request_matchmaking(data):
+    """
+    Handle user requesting to find a study buddy
+    data: { userId, userName, userAvatar, level, topic }
+    """
+    print(f"[WebSocket] Matchmaking request: {data}")
+    user_id = str(data.get('userId'))
+    
+    # Import service here to avoid circular import
+    from services.study_buddy_service import study_buddy_service
+    
+    result = study_buddy_service.request_buddy_match(
+        int(user_id), 
+        data.get('topic'), 
+        data.get('level')
+    )
+    
+    if result.get('matched'):
+        # Notify the matched user via WebSocket
+        buddy_id = str(result['buddy']['id'])
+        if buddy_id in connected_users:
+            buddy_sid = connected_users[buddy_id]['sid']
+            socketio.emit('match_found', {
+                'buddy': {
+                    'id': int(user_id),
+                    'full_name': data.get('userName'),
+                    'avatar_url': data.get('userAvatar')
+                },
+                'room_name': result['room_name'],
+                'topic': result.get('topic')
+            }, room=buddy_sid)
+        
+        # Emit to current user
+        emit('match_found', result)
+    else:
+        # User added to waiting queue
+        emit('matchmaking_queued', result)
+
+
+@socketio.on('cancel_matchmaking')
+def handle_cancel_matchmaking(data):
+    """Cancel matchmaking request"""
+    print(f"[WebSocket] Cancel matchmaking: {data}")
+    user_id = data.get('userId')
+    
+    from services.study_buddy_service import study_buddy_service
+    success = study_buddy_service.cancel_request(int(user_id))
+    
+    emit('matchmaking_cancelled', {'success': success})
+
+
+@socketio.on('send_practice_invite')
+def handle_send_practice_invite(data):
+    """
+    Send direct practice invite to another user
+    data: { fromUserId, fromUserName, fromUserAvatar, toUserId, topic }
+    """
+    print(f"[WebSocket] Practice invite: {data}")
+    from_user_id = str(data.get('fromUserId'))
+    to_user_id = str(data.get('toUserId'))
+    
+    if to_user_id in connected_users:
+        # Store pending invite
+        pending_invites[to_user_id] = {
+            'from_user_id': from_user_id,
+            'from_user_name': data.get('fromUserName'),
+            'from_user_avatar': data.get('fromUserAvatar'),
+            'topic': data.get('topic'),
+            'created_at': datetime.now().isoformat()
+        }
+        
+        target_sid = connected_users[to_user_id]['sid']
+        socketio.emit('practice_invite_received', {
+            'fromUserId': from_user_id,
+            'fromUserName': data.get('fromUserName'),
+            'fromUserAvatar': data.get('fromUserAvatar'),
+            'topic': data.get('topic')
+        }, room=target_sid)
+        
+        emit('invite_sent', {'success': True, 'toUserId': to_user_id})
+        print(f"[WebSocket] Invite sent from {from_user_id} to {to_user_id}")
+    else:
+        emit('invite_failed', {'reason': 'User is offline', 'toUserId': to_user_id})
+        print(f"[WebSocket] User {to_user_id} is offline, invite failed")
+
+
+@socketio.on('respond_practice_invite')
+def handle_respond_practice_invite(data):
+    """
+    Respond to a practice invite
+    data: { userId, fromUserId, accept }
+    """
+    print(f"[WebSocket] Invite response: {data}")
+    user_id = str(data.get('userId'))
+    from_user_id = str(data.get('fromUserId'))
+    accept = data.get('accept', False)
+    
+    if from_user_id in connected_users:
+        from_user_sid = connected_users[from_user_id]['sid']
+        
+        if accept:
+            # Create room for practice session
+            room_name = f"aesp-practice-{from_user_id}-{user_id}-{int(datetime.now().timestamp())}"
+            
+            # Notify inviter
+            socketio.emit('invite_accepted', {
+                'userId': user_id,
+                'roomName': room_name
+            }, room=from_user_sid)
+            
+            # Notify accepter
+            emit('session_starting', {
+                'buddyId': from_user_id,
+                'roomName': room_name
+            })
+            
+            # Clean up pending invite
+            if user_id in pending_invites:
+                del pending_invites[user_id]
+                
+            print(f"[WebSocket] Practice session starting: {room_name}")
+        else:
+            # Notify inviter that invite was declined
+            socketio.emit('invite_declined', {
+                'userId': user_id,
+                'reason': 'User declined the invitation'
+            }, room=from_user_sid)
+            
+            # Clean up pending invite
+            if user_id in pending_invites:
+                del pending_invites[user_id]
+
+
+@socketio.on('end_practice_session')
+def handle_end_practice_session(data):
+    """
+    End a practice session
+    data: { userId, buddyId, roomName }
+    """
+    print(f"[WebSocket] End practice session: {data}")
+    user_id = str(data.get('userId'))
+    buddy_id = str(data.get('buddyId'))
+    
+    from services.study_buddy_service import study_buddy_service
+    study_buddy_service.end_session(int(user_id))
+    
+    # Notify buddy that session ended
+    if buddy_id in connected_users:
+        buddy_sid = connected_users[buddy_id]['sid']
+        socketio.emit('session_ended', {
+            'endedBy': user_id,
+            'roomName': data.get('roomName')
+        }, room=buddy_sid)
+    
+    emit('session_ended_confirmed', {'success': True})
+
+
+def notify_match_found(user_id: str, buddy_data: dict, room_name: str, topic: str = None):
+    """Helper function to notify a user that a match was found"""
+    if str(user_id) in connected_users:
+        target_sid = connected_users[str(user_id)]['sid']
+        socketio.emit('match_found', {
+            'buddy': buddy_data,
+            'room_name': room_name,
+            'topic': topic
+        }, room=target_sid)
+        return True
+    return False
+
+
+def get_online_learner_ids():
+    """Get list of currently connected user IDs (for matching)"""
+    return list(connected_users.keys())
+

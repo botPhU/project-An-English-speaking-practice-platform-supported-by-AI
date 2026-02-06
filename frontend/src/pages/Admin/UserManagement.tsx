@@ -24,11 +24,14 @@ interface User {
 interface UserRowProps {
     user: User;
     onToggleStatus: (userId: string) => void;
+    onEdit: (user: User) => void;
+    onDelete: (user: User) => void;
+    onViewDetail: (user: User) => void;
     getRoleBadge: (role: User['role']) => React.ReactNode;
     getInitials: (name: string) => string;
 }
 
-const UserRow = memo(({ user, onToggleStatus, getRoleBadge, getInitials }: UserRowProps) => {
+const UserRow = memo(({ user, onToggleStatus, onEdit, onDelete, onViewDetail, getRoleBadge, getInitials }: UserRowProps) => {
     return (
         <tr className="group hover:bg-[#283039] transition-colors">
             <td className="p-4">
@@ -78,20 +81,23 @@ const UserRow = memo(({ user, onToggleStatus, getRoleBadge, getInitials }: UserR
             <td className="p-4 text-right">
                 <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
-                        className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors"
+                        className="p-1.5 hover:bg-blue-500/20 text-[#9dabb9] hover:text-blue-400 rounded-lg transition-colors"
                         title="Xem chi tiết"
+                        onClick={() => onViewDetail(user)}
                     >
                         <span className="material-symbols-outlined text-[20px]">visibility</span>
                     </button>
                     <button
                         className="p-1.5 hover:bg-primary/20 text-[#9dabb9] hover:text-primary rounded-lg transition-colors"
                         title="Chỉnh sửa"
+                        onClick={() => onEdit(user)}
                     >
                         <span className="material-symbols-outlined text-[20px]">edit</span>
                     </button>
                     <button
                         className="p-1.5 hover:bg-red-500/20 text-[#9dabb9] hover:text-red-500 rounded-lg transition-colors"
                         title="Xóa"
+                        onClick={() => onDelete(user)}
                     >
                         <span className="material-symbols-outlined text-[20px]">delete</span>
                     </button>
@@ -119,6 +125,18 @@ const UserManagement: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+    // Modal states
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [editForm, setEditForm] = useState({
+        name: '',
+        email: '',
+        role: 'learner' as 'learner' | 'mentor' | 'admin',
+        package: ''
+    });
 
     // WebSocket message handler - memoized to prevent unnecessary reconnections
     const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
@@ -264,6 +282,67 @@ const UserManagement: React.FC = () => {
                 return null;
         }
     }, []);
+
+    // Edit handler
+    const handleEdit = useCallback((user: User) => {
+        setSelectedUser(user);
+        setEditForm({
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            package: user.package
+        });
+        setShowEditModal(true);
+    }, []);
+
+    // Delete handler
+    const handleDelete = useCallback((user: User) => {
+        setSelectedUser(user);
+        setShowDeleteModal(true);
+    }, []);
+
+    // View detail handler
+    const handleViewDetail = useCallback((user: User) => {
+        setSelectedUser(user);
+        setShowDetailModal(true);
+    }, []);
+
+    // Update user API call
+    const handleUpdateUser = async () => {
+        if (!selectedUser) return;
+        try {
+            await adminService.updateUser(selectedUser.id, {
+                name: editForm.name,
+                email: editForm.email,
+                role: editForm.role,
+                package: editForm.package
+            });
+            setUsers(prev => prev.map(u =>
+                u.id === selectedUser.id
+                    ? { ...u, name: editForm.name, email: editForm.email, role: editForm.role, package: editForm.package }
+                    : u
+            ));
+            setShowEditModal(false);
+            setSelectedUser(null);
+        } catch (err) {
+            console.error('Error updating user:', err);
+            alert('Lỗi khi cập nhật người dùng');
+        }
+    };
+
+    // Delete user API call
+    const handleDeleteUser = async () => {
+        if (!selectedUser) return;
+        try {
+            await adminService.deleteUser(selectedUser.id);
+            setUsers(prev => prev.filter(u => u.id !== selectedUser.id));
+            setShowDeleteModal(false);
+            setSelectedUser(null);
+        } catch (err) {
+            console.error('Error deleting user:', err);
+            alert('Lỗi khi xóa người dùng');
+        }
+    };
 
 
     return (
@@ -452,6 +531,9 @@ const UserManagement: React.FC = () => {
                                             key={user.id}
                                             user={user}
                                             onToggleStatus={toggleUserStatus}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                            onViewDetail={handleViewDetail}
                                             getRoleBadge={getRoleBadgeMemo}
                                             getInitials={getInitialsMemo}
                                         />
@@ -488,6 +570,231 @@ const UserManagement: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Edit Modal */}
+            {showEditModal && selectedUser && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-[#1a222a] rounded-2xl p-6 w-full max-w-md border border-[#3b4754]">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-white">Chỉnh sửa người dùng</h3>
+                            <button onClick={() => setShowEditModal(false)} className="text-[#9dabb9] hover:text-white">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-[#9dabb9] mb-1">Tên</label>
+                                <input
+                                    type="text"
+                                    value={editForm.name}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                                    className="w-full bg-[#283039] border border-[#3b4754] text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[#9dabb9] mb-1">Email</label>
+                                <input
+                                    type="email"
+                                    value={editForm.email}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                                    className="w-full bg-[#283039] border border-[#3b4754] text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[#9dabb9] mb-1">Vai trò</label>
+                                <select
+                                    value={editForm.role}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, role: e.target.value as 'learner' | 'mentor' | 'admin' }))}
+                                    className="w-full bg-[#283039] border border-[#3b4754] text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                                >
+                                    <option value="learner">Người học</option>
+                                    <option value="mentor">Giảng viên</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[#9dabb9] mb-1">Gói dịch vụ</label>
+                                <input
+                                    type="text"
+                                    value={editForm.package}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, package: e.target.value }))}
+                                    className="w-full bg-[#283039] border border-[#3b4754] text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                onClick={() => setShowEditModal(false)}
+                                className="flex-1 px-4 py-3 rounded-lg bg-[#283039] text-white font-bold hover:bg-[#3e4854] transition-colors"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleUpdateUser}
+                                className="flex-1 px-4 py-3 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-colors"
+                            >
+                                Lưu thay đổi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && selectedUser && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-[#1a222a] rounded-2xl p-6 w-full max-w-md border border-[#3b4754]">
+                        <div className="text-center">
+                            <div className="size-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                                <span className="material-symbols-outlined text-red-500 text-3xl">warning</span>
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Xác nhận xóa</h3>
+                            <p className="text-[#9dabb9] mb-6">
+                                Bạn có chắc muốn xóa người dùng <strong className="text-white">{selectedUser.name}</strong>?
+                                Hành động này không thể hoàn tác.
+                            </p>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="flex-1 px-4 py-3 rounded-lg bg-[#283039] text-white font-bold hover:bg-[#3e4854] transition-colors"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleDeleteUser}
+                                className="flex-1 px-4 py-3 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"
+                            >
+                                Xóa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* User Detail Modal */}
+            {showDetailModal && selectedUser && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-[#1a222a] rounded-2xl w-full max-w-2xl border border-[#3b4754] max-h-[90vh] overflow-y-auto">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-[#3e4854]/30">
+                            <h3 className="text-xl font-bold text-white">Thông tin người dùng</h3>
+                            <button
+                                onClick={() => setShowDetailModal(false)}
+                                className="text-[#9dabb9] hover:text-white transition-colors"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        {/* Profile Section */}
+                        <div className="p-6">
+                            <div className="flex items-start gap-6 mb-6">
+                                {/* Avatar */}
+                                <div className="size-24 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                                    {selectedUser.avatar ? (
+                                        <img
+                                            src={selectedUser.avatar}
+                                            alt={selectedUser.name}
+                                            className="size-24 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-4xl font-bold text-primary">
+                                            {selectedUser.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                        </span>
+                                    )}
+                                </div>
+                                {/* Info */}
+                                <div className="flex-1">
+                                    <h4 className="text-2xl font-bold text-white mb-1">{selectedUser.name}</h4>
+                                    <p className="text-[#9dabb9] mb-3">{selectedUser.email}</p>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {selectedUser.role === 'learner' && (
+                                            <span className="inline-flex items-center rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/30">
+                                                Người học
+                                            </span>
+                                        )}
+                                        {selectedUser.role === 'mentor' && (
+                                            <span className="inline-flex items-center rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-400 ring-1 ring-inset ring-purple-500/30">
+                                                Giảng viên
+                                            </span>
+                                        )}
+                                        {selectedUser.role === 'admin' && (
+                                            <span className="inline-flex items-center rounded-full bg-yellow-500/20 px-2.5 py-0.5 text-xs font-medium text-yellow-400 ring-1 ring-inset ring-yellow-500/30">
+                                                Quản trị viên
+                                            </span>
+                                        )}
+                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${selectedUser.status
+                                                ? 'bg-green-500/20 text-green-400 ring-green-500/30'
+                                                : 'bg-red-500/20 text-red-400 ring-red-500/30'
+                                            }`}>
+                                            {selectedUser.status ? 'Đang hoạt động' : 'Đã vô hiệu'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* User Info Grid */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-[#283039] rounded-xl p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="material-symbols-outlined text-primary text-lg">inventory_2</span>
+                                        <span className="text-sm text-[#9dabb9]">Gói dịch vụ</span>
+                                    </div>
+                                    <p className="font-bold text-white">{selectedUser.package || 'Chưa có gói'}</p>
+                                </div>
+                                <div className="bg-[#283039] rounded-xl p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="material-symbols-outlined text-primary text-lg">schedule</span>
+                                        <span className="text-sm text-[#9dabb9]">Hoạt động lần cuối</span>
+                                    </div>
+                                    <p className="font-bold text-white">{selectedUser.lastActive || 'Chưa có dữ liệu'}</p>
+                                </div>
+                                <div className="bg-[#283039] rounded-xl p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="material-symbols-outlined text-primary text-lg">wifi</span>
+                                        <span className="text-sm text-[#9dabb9]">Trạng thái online</span>
+                                    </div>
+                                    <p className={`font-bold ${selectedUser.onlineStatus === 'online' ? 'text-green-400'
+                                            : selectedUser.onlineStatus === 'away' ? 'text-yellow-400'
+                                                : 'text-gray-400'
+                                        }`}>
+                                        {selectedUser.onlineStatus === 'online' ? 'Đang online'
+                                            : selectedUser.onlineStatus === 'away' ? 'Vắng mặt'
+                                                : 'Offline'}
+                                    </p>
+                                </div>
+                                <div className="bg-[#283039] rounded-xl p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="material-symbols-outlined text-primary text-lg">badge</span>
+                                        <span className="text-sm text-[#9dabb9]">ID người dùng</span>
+                                    </div>
+                                    <p className="font-bold text-white font-mono">{selectedUser.id}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-[#3e4854]/30 flex gap-3">
+                            <button
+                                onClick={() => setShowDetailModal(false)}
+                                className="flex-1 px-4 py-3 rounded-lg bg-[#283039] text-white font-bold hover:bg-[#3e4854] transition-colors"
+                            >
+                                Đóng
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowDetailModal(false);
+                                    handleEdit(selectedUser);
+                                }}
+                                className="flex-1 px-4 py-3 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-colors"
+                            >
+                                Chỉnh sửa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 };

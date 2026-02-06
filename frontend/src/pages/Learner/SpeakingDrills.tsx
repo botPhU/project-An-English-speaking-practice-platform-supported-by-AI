@@ -264,105 +264,186 @@ export default function SpeakingDrills() {
     const evaluateConversation = async (userText: string) => {
         setLoading(true);
 
-        // Add user message
-        setConversation(prev => [...prev, { role: 'user', text: userText }]);
-        sessionScore.push(0);
+        // Add user message immediately
+        const updatedConversation = [...conversation, { role: 'user' as const, text: userText }];
+        setConversation(updatedConversation);
 
-        try {
-            const response = await api.post('/api/speaking-drills/conversation/respond', {
-                user_id: user?.id,
-                user_text: userText,
-                conversation_history: conversation,
-                topic: selectedTopic?.title
-            });
+        // Retry logic
+        const maxRetries = 2;
+        let lastError: Error | null = null;
 
-            const aiResponse = response.data.ai_response;
-            const score = response.data.score;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`[AI] Calling conversation API (attempt ${attempt + 1})...`);
 
-            setConversation(prev => [...prev, {
-                role: 'ai',
-                text: aiResponse,
-                feedback: response.data.feedback
-            }]);
+                const response = await api.post('/api/speaking-drills/conversation/respond', {
+                    user_id: user?.id,
+                    user_text: userText,
+                    conversation_history: updatedConversation.slice(0, -1), // Exclude the just-added user message
+                    topic: selectedTopic?.title
+                });
 
-            // Update last user message with score
-            setConversation(prev => {
-                const updated = [...prev];
-                const lastUserIdx = updated.length - 2;
-                if (updated[lastUserIdx]?.role === 'user') {
-                    updated[lastUserIdx].score = score;
-                    updated[lastUserIdx].feedback = response.data.feedback;
+                console.log('[AI] Response:', response.data);
+
+                // Check if we got a valid response from the AI
+                const aiResponse = response.data.ai_response;
+                const score = response.data.score || 70;
+                const feedback = response.data.feedback || 'Tiếp tục luyện tập nhé!';
+
+                if (!aiResponse) {
+                    throw new Error('Empty AI response');
                 }
-                return updated;
-            });
 
-            setSessionScore(prev => [...prev.slice(0, -1), score]);
+                // Add AI response to conversation
+                setConversation(prev => {
+                    const updated = [...prev];
+                    // Update the last user message with score
+                    const lastUserIdx = updated.length - 1;
+                    if (updated[lastUserIdx]?.role === 'user') {
+                        updated[lastUserIdx].score = score;
+                        updated[lastUserIdx].feedback = feedback;
+                    }
+                    // Add AI response
+                    return [...updated, {
+                        role: 'ai' as const,
+                        text: aiResponse,
+                        feedback: feedback
+                    }];
+                });
 
-            // Save messages to database session
-            if (currentSessionId) {
-                // Save user message
-                await api.post(`/api/speaking-drills/session/${currentSessionId}/message`, {
-                    role: 'user',
-                    text: userText,
-                    score: score,
-                    feedback: response.data.feedback
-                }).catch(() => { });
+                setSessionScore(prev => [...prev, score]);
 
-                // Save AI response
-                await api.post(`/api/speaking-drills/session/${currentSessionId}/message`, {
-                    role: 'ai',
-                    text: aiResponse
-                }).catch(() => { });
-            }
+                // Save messages to database session
+                if (currentSessionId) {
+                    // Save user message
+                    api.post(`/api/speaking-drills/session/${currentSessionId}/message`, {
+                        role: 'user',
+                        text: userText,
+                        score: score,
+                        feedback: feedback
+                    }).catch(console.error);
 
-            // Set vocabulary hints and sentence templates
-            if (response.data.vocabulary_hints) {
-                setVocabularyHints(response.data.vocabulary_hints);
-            }
-            if (response.data.sentence_templates) {
-                setSentenceTemplates(response.data.sentence_templates);
-            }
-
-            // Auto-play AI response
-            playAudio(aiResponse);
-
-        } catch (error) {
-            // Mock AI response
-            const mockResponses = [
-                "That's interesting! Can you tell me more about that?",
-                "I see! And what do you think about it?",
-                "Great! How does that make you feel?",
-                "That sounds wonderful! What else would you like to share?",
-                "Interesting perspective! Can you give me an example?"
-            ];
-
-            const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
-            const mockScore = Math.floor(Math.random() * 30) + 60;
-
-            setConversation(prev => {
-                const updated = [...prev];
-                const lastUserIdx = updated.length - 1;
-                if (updated[lastUserIdx]?.role === 'user') {
-                    updated[lastUserIdx].score = mockScore;
-                    updated[lastUserIdx].feedback = mockScore >= 80 ? 'Tốt lắm!' : 'Hãy nói rõ hơn';
+                    // Save AI response
+                    api.post(`/api/speaking-drills/session/${currentSessionId}/message`, {
+                        role: 'ai',
+                        text: aiResponse
+                    }).catch(console.error);
                 }
-                return [...updated, { role: 'ai', text: randomResponse }];
-            });
 
-            setSessionScore(prev => [...prev.slice(0, -1), mockScore]);
+                // Set vocabulary hints and sentence templates from AI
+                if (response.data.vocabulary_hints && response.data.vocabulary_hints.length > 0) {
+                    setVocabularyHints(response.data.vocabulary_hints);
+                }
+                if (response.data.sentence_templates && response.data.sentence_templates.length > 0) {
+                    setSentenceTemplates(response.data.sentence_templates);
+                }
 
-            // Mock vocabulary hints
-            setVocabularyHints([
-                { word: "think", meaning: "nghĩ", pronunciation: "/θɪŋk/" },
-                { word: "believe", meaning: "tin", pronunciation: "/bɪˈliːv/" },
-                { word: "opinion", meaning: "ý kiến", pronunciation: "/əˈpɪnjən/" }
-            ]);
-            setSentenceTemplates(["I think that...", "In my opinion...", "Well, I would say..."]);
+                // Auto-play AI response
+                playAudio(aiResponse);
 
-            playAudio(randomResponse);
-        } finally {
-            setLoading(false);
+                // Success - exit retry loop
+                setLoading(false);
+                return;
+
+            } catch (error) {
+                console.error(`[AI] Attempt ${attempt + 1} failed:`, error);
+                lastError = error as Error;
+
+                // Wait before retry (except on last attempt)
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
         }
+
+        // All retries failed - show error and provide a contextual fallback
+        console.error('[AI] All retries failed:', lastError);
+
+        // Generate a contextual response based on user's text
+        const contextualResponse = generateContextualFallback(userText, selectedTopic?.title || 'General');
+
+        setConversation(prev => {
+            const updated = [...prev];
+            const lastUserIdx = updated.length - 1;
+            if (updated[lastUserIdx]?.role === 'user') {
+                updated[lastUserIdx].score = 70;
+                updated[lastUserIdx].feedback = 'Đang có vấn đề kết nối AI, nhưng bạn đang làm tốt!';
+            }
+            return [...updated, { role: 'ai' as const, text: contextualResponse }];
+        });
+
+        setSessionScore(prev => [...prev, 70]);
+        playAudio(contextualResponse);
+        setLoading(false);
+    };
+
+    // Generate contextual fallback when AI API fails
+    const generateContextualFallback = (userText: string, topic: string): string => {
+        const lowerText = userText.toLowerCase();
+
+        // Extract key information from user's response
+        if (lowerText.includes('name') || lowerText.includes('my name')) {
+            const nameMatch = userText.match(/(?:name is|i'm|i am)\s+(\w+)/i);
+            if (nameMatch) {
+                return `Nice to meet you, ${nameMatch[1]}! Where are you from?`;
+            }
+            return "Nice to meet you! Can you tell me where you're from?";
+        }
+
+        if (lowerText.includes('from') || lowerText.includes('vietnam') || lowerText.includes('city')) {
+            return "That's a nice place! What do you do there for work or study?";
+        }
+
+        if (lowerText.includes('work') || lowerText.includes('job') || lowerText.includes('developer') || lowerText.includes('teacher')) {
+            return "That sounds like an interesting job! What do you enjoy most about it?";
+        }
+
+        if (lowerText.includes('study') || lowerText.includes('student') || lowerText.includes('learn')) {
+            return "That's great that you're learning! What subjects do you find most interesting?";
+        }
+
+        if (lowerText.includes('like') || lowerText.includes('enjoy') || lowerText.includes('hobby')) {
+            return "That sounds fun! How often do you get to do that?";
+        }
+
+        if (lowerText.includes('food') || lowerText.includes('eat')) {
+            return "That sounds delicious! Can you describe how it tastes?";
+        }
+
+        // Topic-based fallback
+        const topicResponses: { [key: string]: string[] } = {
+            'Giới thiệu bản thân': [
+                "That's interesting! Can you tell me more about yourself?",
+                "Thanks for sharing! What else would you like to tell me about yourself?"
+            ],
+            'Sở thích': [
+                "That's a great hobby! When did you start doing it?",
+                "Sounds fun! Do you do it alone or with friends?"
+            ],
+            'Công việc': [
+                "That's an interesting job! What are your main responsibilities?",
+                "How long have you been doing that work?"
+            ],
+            'Du lịch': [
+                "That sounds like a great trip! What was the best part?",
+                "I'd love to hear more about your travel experience!"
+            ],
+            'Ẩm thực': [
+                "That sounds delicious! Do you know how to cook it?",
+                "Interesting choice! What makes it your favorite?"
+            ],
+            'Tương lai': [
+                "Those are great plans! When do you hope to achieve them?",
+                "That's ambitious! What's your first step towards that goal?"
+            ]
+        };
+
+        const responses = topicResponses[topic] || [
+            "That's interesting! Can you tell me more about that?",
+            "I'd love to hear more details about what you just said."
+        ];
+
+        return responses[Math.floor(Math.random() * responses.length)];
     };
 
     // Start conversation

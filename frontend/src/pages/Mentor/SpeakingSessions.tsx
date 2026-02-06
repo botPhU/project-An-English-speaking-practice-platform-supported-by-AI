@@ -100,7 +100,12 @@ export default function SpeakingSessions() {
         const fetchSessions = async () => {
             setLoading(true);
             try {
-                const response = await api.get('/api/speaking-drills/sessions?role=mentor');
+                // Get current user ID from localStorage
+                const userDataStr = localStorage.getItem('userData');
+                const userData = userDataStr ? JSON.parse(userDataStr) : null;
+                const mentorId = userData?.id || '';
+
+                const response = await api.get(`/api/speaking-drills/sessions?role=mentor&user_id=${mentorId}`);
                 if (response.data.success && response.data.sessions?.length > 0) {
                     setSessions(response.data.sessions);
                 } else {

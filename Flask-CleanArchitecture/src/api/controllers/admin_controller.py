@@ -306,9 +306,22 @@ def update_mentor_status(mentor_id):
 
 @bp.route('/mentors/<int:mentor_id>/approve', methods=['POST'])
 def approve_mentor(mentor_id):
-    """Approve a pending mentor"""
+    """Approve a pending mentor - changes user role from learner to mentor"""
     result = admin_service.approve_mentor(mentor_id)
-    return jsonify({'message': 'Mentor approved successfully'}), 200
+    if result:
+        return jsonify({'message': 'Mentor approved successfully', 'success': True}), 200
+    return jsonify({'message': 'Failed to approve mentor', 'success': False}), 400
+
+
+@bp.route('/mentors/<int:mentor_id>/reject', methods=['POST'])
+def reject_mentor(mentor_id):
+    """Reject a pending mentor application"""
+    data = request.get_json() or {}
+    reason = data.get('reason', 'Application rejected by admin')
+    result = admin_service.reject_mentor(mentor_id, reason)
+    if result:
+        return jsonify({'message': 'Mentor application rejected', 'success': True}), 200
+    return jsonify({'message': 'Failed to reject mentor', 'success': False}), 400
 
 
 @bp.route('/mentors/pending', methods=['GET'])
@@ -390,3 +403,118 @@ def get_support_stats():
     stats = admin_service.get_support_stats()
     return jsonify(stats), 200
 
+
+# ==================== PURCHASE HISTORY ====================
+
+@bp.route('/purchases', methods=['GET'])
+def get_purchase_history():
+    """
+    Get all purchase/payment history
+    ---
+    tags:
+      - Admin - Purchase History
+    parameters:
+      - name: status
+        in: query
+        type: string
+        enum: [all, completed, pending, failed, refunded]
+      - name: page
+        in: query
+        type: integer
+      - name: limit
+        in: query
+        type: integer
+    responses:
+      200:
+        description: List of purchases
+    """
+    status = request.args.get('status', 'all')
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    purchases = admin_service.get_purchase_history(status, page, limit)
+    return jsonify(purchases), 200
+
+
+@bp.route('/purchases/stats', methods=['GET'])
+def get_purchase_stats():
+    """Get purchase statistics"""
+    stats = admin_service.get_purchase_stats()
+    return jsonify(stats), 200
+
+
+# ==================== POLICY MANAGEMENT ====================
+
+@bp.route('/policies', methods=['GET'])
+def get_admin_policies():
+    """Get all policies for admin management"""
+    from services.policy_service import PolicyService
+    policy_type = request.args.get('type')
+    policies = PolicyService.get_all_policies(policy_type=policy_type, active_only=False)
+    return jsonify({'policies': policies, 'count': len(policies)}), 200
+
+
+@bp.route('/policies', methods=['POST'])
+def create_admin_policy():
+    """Create a new policy (Admin)"""
+    from services.policy_service import PolicyService
+    from datetime import datetime
+    data = request.get_json()
+    
+    if not data.get('title') or not data.get('content'):
+        return jsonify({'error': 'title and content are required'}), 400
+    
+    effective_date = None
+    if data.get('effective_date'):
+        try:
+            effective_date = datetime.fromisoformat(data['effective_date'])
+        except:
+            pass
+    
+    policy = PolicyService.create_policy(
+        title=data['title'],
+        content=data['content'],
+        policy_type=data.get('policy_type'),
+        version=data.get('version'),
+        effective_date=effective_date,
+        created_by=data.get('created_by')
+    )
+    return jsonify(policy), 201
+
+
+@bp.route('/policies/<int:policy_id>', methods=['PUT'])
+def update_admin_policy(policy_id):
+    """Update a policy (Admin)"""
+    from services.policy_service import PolicyService
+    from datetime import datetime
+    data = request.get_json()
+    
+    effective_date = None
+    if data.get('effective_date'):
+        try:
+            effective_date = datetime.fromisoformat(data['effective_date'])
+        except:
+            pass
+    
+    policy = PolicyService.update_policy(
+        policy_id=policy_id,
+        title=data.get('title'),
+        content=data.get('content'),
+        policy_type=data.get('policy_type'),
+        version=data.get('version'),
+        is_active=data.get('is_active'),
+        effective_date=effective_date
+    )
+    
+    if not policy:
+        return jsonify({'error': 'Policy not found'}), 404
+    return jsonify(policy), 200
+
+
+@bp.route('/policies/<int:policy_id>', methods=['DELETE'])
+def delete_admin_policy(policy_id):
+    """Delete a policy (Admin)"""
+    from services.policy_service import PolicyService
+    success = PolicyService.delete_policy(policy_id)
+    if success:
+        return jsonify({'message': 'Policy deleted'}), 200
+    return jsonify({'error': 'Policy not found'}), 404
