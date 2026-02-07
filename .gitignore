@@ -82,3 +82,6 @@ api_response*.json
 # Database backups
 *.sql
 database_backup.sql
+
+# Agent config
+.agent/
